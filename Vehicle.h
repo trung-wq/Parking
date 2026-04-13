@@ -1,0 +1,47 @@
+#pragma once
+#define _CRT_SECURE_NO_WARNINGS
+#include <iostream>
+#include <ctime>
+#include "Ticket.h"
+using namespace std;
+
+class Vehicle {
+
+protected:
+
+    string plate;
+    Ticket ticket;
+   
+
+public:
+
+    Vehicle(string p, string ticketID)
+        : plate(p), ticket(ticketID) {}
+
+    virtual ~Vehicle() {}
+
+    string getPlate() {
+        return plate;
+    }
+
+    Ticket& getTicket() {
+        return ticket;
+    }
+
+    int getHour(time_t t) {
+        time_t now;
+        time(&now);
+        //tm* info = localtime(&t);
+        tm* info_t = localtime(&t);
+        return info_t->tm_hour;
+    }
+
+    virtual int calculateFee() = 0;
+
+    virtual void display() {
+
+        cout << "Bien so: " << plate << endl;
+        ticket.display();
+    }
+    virtual int getType() = 0;
+};

@@ -1,0 +1,18 @@
+# Visual Studio files
+.vs/
+x64/
+Debug/
+Release/
+*.sln
+*.vcxproj
+*.filters
+*.user
+.vscode
+
+# Executables
+*.exe
+main.exe
+app
+parking_app
+
+Parking
