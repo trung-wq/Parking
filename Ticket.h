@@ -12,17 +12,37 @@ private:
     string id;
     time_t timeIn;
     time_t timeOut;
+    string dateIn;
+    string dateOut;
 
 public:
     // Constructor với biển số
     Ticket(string i) {
         id = i;
         time(&timeIn);
+        dateIn = setDate(timeIn);
     }
 
     Ticket() {
         id = "BICYCLE"; // hoặc sinh ID tự động
         time(&timeIn);
+    }
+    string setDate(time_t d)
+    {
+        tm info;
+        localtime_s(&info, &d);
+        char buffer[50];
+        strftime(buffer,sizeof(buffer), "%d/%m/%Y", &info);
+        return string(buffer);
+        //date = string(buffer);
+    }
+    void _setDateIn(string _dateIn)
+    {
+        dateIn = _dateIn;
+    }
+    void _setDateOut(string _dateOut)
+    {
+        dateOut = _dateOut;
     }
     void setTimeIn(time_t t)
     {
@@ -34,6 +54,7 @@ public:
     }
     void setTimeOut() {
         time(&timeOut);
+        dateOut = setDate(timeOut);
     }
 
     time_t getTimeIn() {
@@ -43,21 +64,30 @@ public:
     time_t getTimeOut() {
         return timeOut;
     }
+    string formatTime(time_t t)
+    {
+        tm info;
+        localtime_s(&info, &t);
 
-    string getID() {
-        return id;
+        char buffer[50];
+
+        //strftime(buffer, sizeof(buffer), "%d/%m/%Y %H:%M", &info);
+        strftime(buffer, sizeof(buffer), "%H:%M", &info);
+
+        return string(buffer);
     }
-
+    
+    string getDateIn() { return dateIn; }
+    string getDateOut() { return dateOut; }
     void display() {
-        tm* t = localtime(&timeIn);
+        tm t;
+        localtime_s(&t, &timeIn);
 
 
         cout << "Ve: " << id << endl;
-        cout << "Ngay va gio vao: "
-            << (t->tm_year + 1900) << "/"
-            << (t->tm_mon + 1) << "/"
-            << t->tm_mday << " "
-            << t->tm_hour << ":"
-            << t->tm_min << endl;
+        cout << "Ngay vao: " << dateIn << endl;
+        cout << "Gio vao: " << formatTime(timeIn) << endl;
+            /*<< t.tm_hour << ":"
+            << t.tm_min << endl;*/
     }
 };
