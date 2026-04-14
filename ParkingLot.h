@@ -17,6 +17,7 @@ private:
     stack<Vehicle*> history;
 
     int revenue = 0;
+    int ticketCounter = 1;
 
     Employee emp;
 

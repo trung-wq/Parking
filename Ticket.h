@@ -30,7 +30,7 @@ public:
     string setDate(time_t d)
     {
         tm info;
-        localtime_s(&info, &d);
+        localtime_r(&d, &info);
         char buffer[50];
         strftime(buffer,sizeof(buffer), "%d/%m/%Y", &info);
         return string(buffer);
@@ -67,7 +67,7 @@ public:
     string formatTime(time_t t)
     {
         tm info;
-        localtime_s(&info, &t);
+        localtime_r(&t, &info);
 
         char buffer[50];
 
@@ -79,9 +79,10 @@ public:
     
     string getDateIn() { return dateIn; }
     string getDateOut() { return dateOut; }
+    string getId() { return id; }
     void display() {
         tm t;
-        localtime_s(&t, &timeIn);
+        localtime_r(&timeIn, &t);
 
 
         cout << "Ve: " << id << endl;

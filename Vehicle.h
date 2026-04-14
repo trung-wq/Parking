@@ -28,6 +28,18 @@ public:
         return ticket;
     }
 
+    string formatTime(time_t t) 
+    {
+        tm info;
+        localtime_r(&t, &info);
+
+        char buffer[50];
+
+        strftime(buffer, sizeof(buffer), "%H:%M", &info);
+
+        return string(buffer);
+    }
+
     int getHour(time_t t) {
         time_t now;
         time(&now);

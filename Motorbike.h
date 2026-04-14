@@ -9,22 +9,30 @@ public:
         : Vehicle(p, tID) {}
 
     int calculateFee() {
-
         int fee = 0;
-
         time_t temp = ticket.getTimeIn();
         time_t out = ticket.getTimeOut();
 
         while (temp < out) {
+            tm* info = localtime(&temp);
+            int h = info->tm_hour;
 
-            int h = getHour(temp);
-
-            if (h >= 6 && h < 18)
+            if (h >= 6 && h < 18) {
                 fee += 3000;
-            else
+                info->tm_hour = 18;
+                info->tm_min = 0;
+                info->tm_sec = 0;
+                temp = mktime(info);
+            } else {
                 fee += 5000;
-
-            temp += 3600;
+                if (h >= 18) {
+                    info->tm_mday += 1;
+                }
+                info->tm_hour = 6;
+                info->tm_min = 0;
+                info->tm_sec = 0;
+                temp = mktime(info);
+            }
         }
 
         return fee;

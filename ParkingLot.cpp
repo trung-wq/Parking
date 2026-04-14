@@ -1,4 +1,4 @@
-﻿#include "ParkingLot.h"
+#include "ParkingLot.h"
 
 void ParkingLot::saveToFile()
 {
@@ -163,15 +163,60 @@ void ParkingLot::addVehicle() {
 
     int type;
     string plate;
+    string ticketID;
 
-    cout << "1 Xe dap\n2 Xe may\n3 O to\nChon: ";
-    cin >> type;
+    cout << "1 Xe dap\n2 Xe may\n3 O to\n4 Quay lai\nChon: ";
+    while (true) {
+        if (!(cin >> type)) {
+            cin.clear();
+            cin.ignore(10000, '\n');
+            cout << "Vui long nhap ki tu so!\nChon: ";
+        } else if (type < 1 || type > 4) {
+            cout << "Lua chon khong hop le. Vui long chon 1, 2, 3 hoac 4!\nChon: ";
+        } else {
+            break;
+        }
+    }
 
-    cin.ignore();
-    cout << "Nhap bien so: ";
-    getline(cin,plate);
+    if (type == 4) return;
 
-    string ticketID = "T" + plate;
+    if (type != 1) {
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        bool validPlate;
+        do {
+            validPlate = true;
+            cout << "Nhap bien so: ";
+            getline(cin, plate);
+            if (plate.length() < 7 || plate.length() > 9) {
+                cout << "Bien so phai co do dai tu 7 den 9 ki tu. Vui long nhap lai!\n";
+                validPlate = false;
+            } else {
+                for (char c : plate) {
+                    if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))) {
+                        cout << "Bien so khong duoc chua ki tu dac biet. Vui long nhap lai!\n";
+                        validPlate = false;
+                        break;
+                    }
+                }
+                if (validPlate) {
+                    queue<Vehicle*> temp = parkingQueue;
+                    while (!temp.empty()) {
+                        if (temp.front()->getPlate() == plate) {
+                            cout << "Bien so xe nay da co trong bai. Vui long nhap lai!\n";
+                            validPlate = false;
+                            break;
+                        }
+                        temp.pop();
+                    }
+                }
+            }
+        } while (!validPlate);
+        ticketID = "T" + plate;
+    } else {
+        plate = "";
+        ticketID = "T" + to_string(ticketCounter);
+    }
+    ticketCounter++;
 
     Vehicle* v;
 
@@ -196,10 +241,43 @@ void ParkingLot::removeVehicle() {
         cout << "Bai xe rong\n";
         return;
     }
-    string _plate;
-    cout << "Nhap vao bien so xe: ";
+    int opt;
+    cout << "1 Nhap ve\n2 Nhap bien so\n3 Quay lai\nChon: ";
+    while (true) {
+        if (!(cin >> opt)) {
+            cin.clear();
+            cin.ignore(10000, '\n');
+            cout << "Vui long nhap ky tu so!\nChon: ";
+        } else if (opt < 1 || opt > 3) {
+            cout << "Vui long chon 1, 2 hoac 3!\nChon: ";
+        } else {
+            break;
+        }
+    }
+
+    if (opt == 3) return;
+
+    string inputStr;
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
-    getline(cin, _plate);
+    bool validStr;
+    do {
+        validStr = true;
+        if (opt == 1) cout << "Nhap vao ma ve: ";
+        else cout << "Nhap vao bien so: ";
+        getline(cin, inputStr);
+        if (inputStr.empty()) {
+            cout << "Khong duoc de trong. Vui long nhap lai!\n";
+            validStr = false;
+        } else {
+            for (char c : inputStr) {
+                if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))) {
+                    cout << "Thong tin khong duoc chua ki tu dac biet hoac khoang trang. Vui long nhap lai!\n";
+                    validStr = false;
+                    break;
+                }
+            }
+        }
+    } while (!validStr);
 
     queue<Vehicle*> temp;
     bool found = false;
@@ -207,7 +285,15 @@ void ParkingLot::removeVehicle() {
     {
         Vehicle* v = parkingQueue.front();
         parkingQueue.pop();
-        if (v->getPlate() == _plate && !found)
+        
+        bool isMatch = false;
+        if (opt == 1 && v->getTicket().getId() == inputStr) {
+            isMatch = true;
+        } else if (opt == 2 && v->getPlate() == inputStr && !v->getPlate().empty()) {
+            isMatch = true;
+        }
+
+        if (isMatch && !found)
         {
             v->getTicket().setTimeOut();
 
@@ -219,7 +305,6 @@ void ParkingLot::removeVehicle() {
             
             history.push(v);
            
-            //loadFromFile();
             found = true;
         }
         else
@@ -230,7 +315,8 @@ void ParkingLot::removeVehicle() {
     parkingQueue = temp;
     
     if (!found) {
-        cout << "Khong tim thay xe co bien so: " << _plate << endl;
+        if (opt == 1) cout << "Khong tim thay xe co ma ve: " << inputStr << endl;
+        else cout << "Khong tim thay xe co bien so: " << inputStr << endl;
     }
     else {
         saveToFile();
@@ -241,6 +327,10 @@ void ParkingLot::removeVehicle() {
 void ParkingLot::showListParking()
 {
     loadFromFile();
+    if (parkingQueue.empty()) {
+        cout << "Hien tai khong co xe nao trong bai!\n";
+        return;
+    }
     queue<Vehicle*> temp = parkingQueue;
     while (!temp.empty())
     {
@@ -274,6 +364,11 @@ void ParkingLot::showListParking()
 }
 void ParkingLot::display() {
 
+    if (parkingQueue.empty()) {
+        cout << "Hien tai khong co xe nao trong bai!\n";
+        return;
+    }
+    cout << "\n===== DANH SACH XE TRONG BAI =====\n";
     queue<Vehicle*> temp = parkingQueue;
 
     while (!temp.empty()) {
@@ -286,25 +381,56 @@ void ParkingLot::display() {
 
 void ParkingLot::search() {
 
-    string plate;
-    cout << "Nhap bien so: ";
-    cin >> plate;
+    if (parkingQueue.empty()) {
+        cout << "Hien tai khong co xe nao trong bai!\n";
+        return;
+    }
+    int opt;
+    cout << "1 Nhap ve\n2 Nhap bien so\n3 Quay lai\nChon: ";
+    while (true) {
+        if (!(cin >> opt)) {
+            cin.clear();
+            cin.ignore(10000, '\n');
+            cout << "Vui long nhap ky tu so!\nChon: ";
+        } else if (opt < 1 || opt > 3) {
+            cout << "Vui long chon 1, 2 hoac 3!\nChon: ";
+        } else {
+            break;
+        }
+    }
+
+    if (opt == 3) return;
+
+    string inputStr;
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    if (opt == 1) cout << "Nhap vao ma ve: ";
+    else cout << "Nhap vao bien so: ";
+    getline(cin, inputStr);
 
     queue<Vehicle*> temp = parkingQueue;
+    bool found = false;
 
     while (!temp.empty()) {
-
-        if (temp.front()->getPlate() == plate) {
-
-            cout << "Tim thay:\n";
-            temp.front()->display();
-            return;
+        bool isMatch = false;
+        if (opt == 1 && temp.front()->getTicket().getId() == inputStr) {
+            isMatch = true;
+        } else if (opt == 2 && temp.front()->getPlate() == inputStr && !temp.front()->getPlate().empty()) {
+            isMatch = true;
         }
 
+        if (isMatch) {
+            cout << "Tim thay:\n";
+            temp.front()->display();
+            found = true;
+            return;
+        }
         temp.pop();
     }
 
-    cout << "Khong tim thay\n";
+    if (!found) {
+        if (opt == 1) cout << "Khong tim thay xe co ma ve: " << inputStr << "\n";
+        else cout << "Khong tim thay xe co bien so: " << inputStr << "\n";
+    }
 }
 
 void ParkingLot::showRevenue() {
@@ -347,7 +473,7 @@ void ParkingLot::revenueByDate()
 void getDateParts(time_t t, int& d, int& m, int& y)
 {
     tm info;
-    localtime_s(&info, &t);
+    localtime_r(&t, &info);
 
     d = info.tm_mday;
     m = info.tm_mon + 1;

@@ -4,38 +4,42 @@
 class Bicycle : public Vehicle {
 
 public:
+  Bicycle(string p, string tID) : Vehicle(p, tID) {}
 
-    Bicycle(string p, string tID)
-        : Vehicle(p, tID) {}
+  int calculateFee() {
 
-    int calculateFee() {
+    int fee = 0;
+    time_t temp = ticket.getTimeIn();
+    time_t out = ticket.getTimeOut();
 
-        int fee = 0;
+    while (temp < out) {
+        tm* info = localtime(&temp);
+        int h = info->tm_hour;
 
-        time_t temp = ticket.getTimeIn();
-        time_t out = ticket.getTimeOut();
-
-        while (temp < out) {
-
-            int h = getHour(temp);
-
-            if (h >= 6 && h < 18)
-                fee += 1000;
-            else
-                fee += 2000;
-
-            temp += 3600;
+        if (h >= 6 && h < 18) {
+            fee += 2000;
+            info->tm_hour = 18;
+            info->tm_min = 0;
+            info->tm_sec = 0;
+            temp = mktime(info);
+        } else {
+            fee += 3000;
+            if (h >= 18) {
+                info->tm_mday += 1;
+            }
+            info->tm_hour = 6;
+            info->tm_min = 0;
+            info->tm_sec = 0;
+            temp = mktime(info);
         }
-
-        return fee;
     }
 
-    void display() {
-        cout << "[Xe dap]\n";
-        Vehicle::display();
-    }
-    int getType()
-    {
-        return 1;
-    }
+    return fee;
+  }
+
+  void display() {
+    cout << "[Xe dap]\n";
+    ticket.display();
+  }
+  int getType() { return 1; }
 };
