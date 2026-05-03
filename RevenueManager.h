@@ -21,8 +21,8 @@ public:
 
   void showRevenue();    // Tổng doanh thu hiện tại
   void ShowHistory();    // Lịch sử xe đã rời bãi
-  void revenueByDate();  // Doanh thu theo chuỗi ngày (dd/mm/yyyy)
-  void revenueByDay();   // Doanh thu theo ngày + sắp xếp
-  void revenueByMonth(); // Doanh thu theo tháng + sắp xếp
-  void revenueByYear();  // Doanh thu theo năm + sắp xếp
+  bool revenueByDate();  // Doanh thu theo chuỗi ngày (dd/mm/yyyy)
+  bool revenueByDay();   // Doanh thu theo ngày + sắp xếp
+  bool revenueByMonth(); // Doanh thu theo tháng + sắp xếp
+  bool revenueByYear();  // Doanh thu theo năm + sắp xếp
 };

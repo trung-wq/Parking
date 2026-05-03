@@ -67,9 +67,11 @@ string ParkingStorage::readPlate(bool checkDuplicate, int vehicleType) {
         continue;
       }
     } else {
-      // Kiểm tra chung (xe đạp hoặc fallback)
-      if (!Utils::isValidPlate(plate)) {
-        cout << "  [-] Bien so khong hop le (6-10 ky tu)!\n";
+      // Kiểm tra chung: chấp nhận cả định dạng xe máy hoặc ô tô
+      if (!Utils::isValidMotorbikePlate(plate) &&
+          !Utils::isValidCarPlate(plate)) {
+        cout << "  [-] Bien so khong dung dinh dang xe may hoac o to!\n";
+        cout << "      (VD: 29B12345, 29A12345)\n";
         continue;
       }
     }
@@ -97,7 +99,7 @@ void ParkingStorage::saveToFile() {
       savedPlate = "NONE";
     out << v->getType() << " " << savedPlate << " "
         << v->getTicket().getDateIn() << " " << v->getTicket().getTimeIn()
-        << endl;
+        << " " << v->getTicket().getEmployeeID() << endl;
     temp.pop();
   }
   out.close();
@@ -121,7 +123,8 @@ void ParkingStorage::saveHistoryToFile() {
     out << v->getType() << " " << savedPlate << " "
         << v->getTicket().getDateIn() << " " << v->getTicket().getTimeIn()
         << " " << v->getTicket().getDateOut() << " "
-        << v->getTicket().getTimeOut() << " " << v->calculateFee() << endl;
+        << v->getTicket().getTimeOut() << " " << v->calculateFee() << " "
+        << v->getTicket().getEmployeeID() << endl;
     temp.pop();
   }
   out.close();
@@ -138,9 +141,10 @@ void ParkingStorage::loadHistoryFromFile() {
   history = stack<Vehicle *>();
   revenue = 0; // Reset doanh thu để tính lại từ đầu file lịch sử
   int type, fee;
-  string plate, Indate, Outdate;
+  string plate, Indate, Outdate, eid;
   time_t timeIn, timeOut;
-  while (in >> type >> plate >> Indate >> timeIn >> Outdate >> timeOut >> fee) {
+  while (in >> type >> plate >> Indate >> timeIn >> Outdate >> timeOut >> fee >>
+         eid) {
     Vehicle *v;
     if (type == 1) {
       string tid = (plate == "NONE") ? "T" : plate;
@@ -158,6 +162,7 @@ void ParkingStorage::loadHistoryFromFile() {
     v->getTicket().setTimeIn(timeIn);
     v->getTicket()._setDateOut(Outdate);
     v->getTicket()._setTimeOut(timeOut);
+    v->getTicket().setEmployeeID(eid);
     history.push(v);
     revenue += fee; // Khôi phục doanh thu
   }
@@ -174,9 +179,9 @@ void ParkingStorage::loadFromFile() {
   while (!parkingQueue.empty())
     parkingQueue.pop();
   int type;
-  string plate, inDate;
+  string plate, inDate, eid;
   time_t inTime;
-  while (in >> type >> plate >> inDate >> inTime) {
+  while (in >> type >> plate >> inDate >> inTime >> eid) {
     Vehicle *v;
     if (type == 1) {
       string tid = (plate == "NONE") ? "T" : plate;
@@ -200,6 +205,7 @@ void ParkingStorage::loadFromFile() {
     }
     v->getTicket()._setDateIn(inDate);
     v->getTicket().setTimeIn(inTime);
+    v->getTicket().setEmployeeID(eid);
     parkingQueue.push(v);
   }
   in.close();
@@ -209,7 +215,7 @@ void ParkingStorage::loadFromFile() {
 // ============================================================
 //  Quản lý xe: thêm xe
 // ============================================================
-bool ParkingStorage::addVehicle() {
+bool ParkingStorage::addVehicle(string empID) {
 
   cout << "\n---------- THEM XE VAO BAI GIU XE ----------\n";
   cout << "  1. Xe dap\n";
@@ -275,6 +281,7 @@ bool ParkingStorage::addVehicle() {
     ticketID = "T" + plate;
   }
   Vehicle *v = vehicleFactory.at(type)(plate, ticketID);
+  v->getTicket().setEmployeeID(empID);
 
   parkingQueue.push(v);
 
@@ -291,82 +298,95 @@ bool ParkingStorage::addVehicle() {
 //  Quản lý xe: xóa xe (xe rời bãi)
 // ============================================================
 bool ParkingStorage::removeVehicle() {
-  if (parkingQueue.empty()) {
-    cout << "Bai xe rong\n";
-    return true;
-  }
-
-  cout << "1 Nhap ve\n2 Nhap bien so\n3 Quay lai\nChon: ";
-  int opt = Utils::readMenuChoice(1, 3);
-  if (opt == 3)
-    return false;
-
-  string inputStr;
-  if (opt == 1) {
-    while (true) {
-      cout << "Nhap vao ma ve: ";
-      getline(cin, inputStr);
-      inputStr = Utils::normalizeString(inputStr);
-      if (inputStr.empty()) {
-        cout << "  [!] Khong duoc de trong!\n";
-        continue;
-      }
-      if (Utils::hasInvalidChar(inputStr)) {
-        cout << "  [!] Ma ve chi duoc chua chu cai hoac so (khong khoang "
-                "trang/ky tu dac biet)!\n";
-        continue;
-      }
-      break;
-    }
-  } else {
-    // Tìm xe theo biển số — không biết loại xe, dùng kiểm tra chung
-    inputStr = readPlate(false);
-  }
-
-  queue<Vehicle *> temp;
-  bool found = false;
-  while (!parkingQueue.empty()) {
-    Vehicle *v = parkingQueue.front();
-    parkingQueue.pop();
-
-    bool isMatch = false;
-    if (opt == 1 && v->getTicket().getId() == inputStr) {
-      isMatch = true;
-    } else if (opt == 2 && v->getPlate() == inputStr &&
-               !v->getPlate().empty()) {
-      isMatch = true;
+  while (true) {
+    if (parkingQueue.empty()) {
+      cout << "Bai xe rong\n";
+      return true;
     }
 
-    if (!found && isMatch) {
-      v->getTicket().setTimeOut();
-      int fee = v->calculateFee();
-      cout << "\n========================================";
-      cout << "\n         XE ROI BAI THANH CONG        ";
-      cout << "\n========================================\n";
-      v->display();
-      cout << "Ngay ra  : " << v->getTicket().getDateOut() << endl;
-      cout << "Gio ra   : " << v->formatTime(v->getTicket().getTimeOut())
-           << endl;
-      cout << "Tien gui : " << fee << " VND\n";
-      cout << "========================================\n";
-      revenue += fee;
+    cout << "\n---------- XE ROI BAI ----------\n";
+    cout << "  1. Nhap ma ve\n";
+    cout << "  2. Nhap bien so\n";
+    cout << "  3. Quay lai\n";
+    cout << "--------------------------------\n";
+    cout << "  Chon: ";
+    int opt = Utils::readMenuChoice(1, 3);
+    if (opt == 3)
+      return false;
 
-      history.push(v);
-      found = true;
+    string inputStr;
+    if (opt == 1) {
+      while (true) {
+        cout << "  Nhap ma ve: ";
+        getline(cin, inputStr);
+        inputStr = Utils::normalizeString(inputStr);
+        if (inputStr.empty()) {
+          cout << "  [!] Khong duoc de trong!\n";
+          continue;
+        }
+        if (Utils::hasInvalidChar(inputStr)) {
+          cout << "  [!] Ma ve chi duoc chua chu cai hoac so (khong khoang "
+                  "trang/ky tu dac biet)!\n";
+          continue;
+        }
+        break;
+      }
     } else {
-      temp.push(v);
+      inputStr = readPlate(false);
+    }
+
+    queue<Vehicle *> temp;
+    bool found = false;
+    while (!parkingQueue.empty()) {
+      Vehicle *v = parkingQueue.front();
+      parkingQueue.pop();
+
+      bool isMatch = false;
+      if (opt == 1 && v->getTicket().getId() == inputStr) {
+        isMatch = true;
+      } else if (opt == 2 && v->getPlate() == inputStr &&
+                 !v->getPlate().empty()) {
+        isMatch = true;
+      }
+
+      if (!found && isMatch) {
+        v->getTicket().setTimeOut();
+        int fee = v->calculateFee();
+        cout << "\n========================================";
+        cout << "\n         XE ROI BAI THANH CONG        ";
+        cout << "\n========================================\n";
+        v->display();
+        cout << "Ngay ra  : " << v->getTicket().getDateOut() << endl;
+        cout << "Gio ra   : " << v->formatTime(v->getTicket().getTimeOut())
+             << endl;
+        cout << "Tien gui : " << fee << " VND\n";
+        cout << "========================================\n";
+        revenue += fee;
+
+        history.push(v);
+        found = true;
+      } else {
+        temp.push(v);
+      }
+    }
+    parkingQueue = temp;
+
+    if (found) {
+      saveToFile();
+      saveHistoryToFile();
+      return true;
+    } else {
+      if (opt == 1)
+        cout << "\n  [-] Khong tim thay xe co ma ve: " << inputStr << "\n";
+      else
+        cout << "\n  [-] Khong tim thay xe co bien so: " << inputStr << "\n";
+
+      cout << "\n  1. Tiep tuc nhap lai\n";
+      cout << "  2. Quay lai menu\n";
+      cout << "  Chon: ";
+      int retryOpt = Utils::readMenuChoice(1, 2);
+      if (retryOpt == 2)
+        return false;
     }
   }
-  parkingQueue = temp;
-
-  if (!found) {
-    if (opt == 1)
-      cout << "Khong tim thay xe co ma ve: " << inputStr << "\n";
-    else
-      cout << "Khong tim thay xe co bien so: " << inputStr << "\n";
-  } else {
-    saveToFile();
-    saveHistoryToFile();
-  }
-  return !found;
 }

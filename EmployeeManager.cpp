@@ -62,6 +62,10 @@ void EmployeeManager::addEmployee() {
       cout << "  [!] Khong duoc de trong!\n";
       continue;
     }
+    if (id.length() > 6) {
+      cout << "  [!] ID nhan vien toi da 6 ky tu!\n";
+      continue;
+    }
     if (Utils::hasInvalidChar(id)) {
       cout << "  [!] ID khong duoc chua khoang trang hay ky tu dac biet!\n";
       continue;
@@ -85,6 +89,10 @@ void EmployeeManager::addEmployee() {
     getline(cin, name);
     if (name.empty()) {
       cout << "  [!] Khong duoc de trong!\n";
+      continue;
+    }
+    if (name.length() > 50) {
+      cout << "  [!] Ho ten toi da 50 ky tu!\n";
       continue;
     }
     break;
@@ -174,6 +182,10 @@ void EmployeeManager::updateEmployee() {
         getline(cin, name);
         if (name.empty()) {
           cout << "  [!] Khong duoc de trong!\n";
+          continue;
+        }
+        if (name.length() > 50) {
+          cout << "  [!] Ho ten toi da 50 ky tu!\n";
           continue;
         }
         break;

@@ -118,66 +118,72 @@ void ParkingChecker::display() {
 //  Tìm kiếm xe theo mã vé hoặc biển số
 // ============================================================
 bool ParkingChecker::search() {
-  queue<Vehicle *> &pq = storage.getQueue();
-  if (pq.empty()) {
-    cout << "\n  [!] Hien tai khong co xe nao trong bai!\n";
-    return true;
-  }
-
-  cout << "\n---------- TIM KIEM XE ----------\n";
-  cout << "  1. Theo ma ve\n";
-  cout << "  2. Theo bien so\n";
-  cout << "  3. Quay lai\n";
-  cout << "-------------------------------\n";
-  cout << "  Chon: ";
-  int opt = Utils::readMenuChoice(1, 3);
-  if (opt == 3)
-    return false;
-
-  string inputStr;
   while (true) {
-    if (opt == 1)
-      cout << "  Nhap ma ve: ";
-    else
-      cout << "  Nhap bien so: ";
-    getline(cin, inputStr);
-
-    if (inputStr.empty()) {
-      cout << "  [!] Khong duoc de trong!\n";
-      continue;
-    }
-    if (Utils::hasInvalidChar(inputStr)) {
-      cout << "  [!] Chi chap nhan chu cai va so!\n";
-      continue;
-    }
-
-    inputStr = Utils::normalizeString(inputStr);
-    break;
-  }
-
-  queue<Vehicle *> temp = pq;
-  bool found = false;
-  while (!temp.empty()) {
-    Vehicle *v = temp.front();
-    bool isMatch = false;
-    if (opt == 1 && v->getTicket().getId() == inputStr)
-      isMatch = true;
-    else if (opt == 2 && v->getPlate() == inputStr && !v->getPlate().empty())
-      isMatch = true;
-
-    if (isMatch) {
-      cout << "\n========================================\n";
-      cout << "         THONG TIN XE TIM THAY\n";
-      cout << "========================================\n";
-      v->display();
-      cout << "========================================\n";
-      found = true;
+    queue<Vehicle *> &pq = storage.getQueue();
+    if (pq.empty()) {
+      cout << "\n  [!] Hien tai khong co xe nao trong bai!\n";
       return true;
     }
-    temp.pop();
+
+    cout << "\n---------- TIM KIEM XE ----------\n";
+    cout << "  1. Theo ma ve\n";
+    cout << "  2. Theo bien so\n";
+    cout << "  3. Quay lai\n";
+    cout << "-------------------------------\n";
+    cout << "  Chon: ";
+    int opt = Utils::readMenuChoice(1, 3);
+    if (opt == 3)
+      return false;
+
+    string inputStr;
+    if (opt == 1) {
+      while (true) {
+        cout << "  Nhap ma ve: ";
+        getline(cin, inputStr);
+        inputStr = Utils::normalizeString(inputStr);
+        if (inputStr.empty()) {
+          cout << "  [!] Khong duoc de trong!\n";
+          continue;
+        }
+        if (Utils::hasInvalidChar(inputStr)) {
+          cout << "  [!] Chi chap nhan chu cai va so!\n";
+          continue;
+        }
+        break;
+      }
+    } else {
+      inputStr = storage.readPlate(false);
+    }
+
+    queue<Vehicle *> temp = pq;
+    bool found = false;
+    while (!temp.empty()) {
+      Vehicle *v = temp.front();
+      bool isMatch = false;
+      if (opt == 1 && v->getTicket().getId() == inputStr)
+        isMatch = true;
+      else if (opt == 2 && v->getPlate() == inputStr && !v->getPlate().empty())
+        isMatch = true;
+
+      if (isMatch) {
+        cout << "\n========================================\n";
+        cout << "         THONG TIN XE TIM THAY\n";
+        cout << "========================================\n";
+        v->display();
+        cout << "========================================\n";
+        found = true;
+        return true;
+      }
+      temp.pop();
+    }
+    if (!found) {
+      cout << "\n  [!] KHONG TIM THAY XE: " << inputStr << "\n";
+      cout << "\n  1. Tiep tuc tim xe khac\n";
+      cout << "  2. Quay lai menu\n";
+      cout << "  Chon: ";
+      int retryOpt = Utils::readMenuChoice(1, 2);
+      if (retryOpt == 2)
+        return false;
+    }
   }
-  if (!found) {
-    cout << "\n  [!] KHONG TIM THAY XE: " << inputStr << "\n";
-  }
-  return true;
 }

@@ -111,7 +111,7 @@ int main() {
 
         switch (choice) {
         case 1:
-          if (lot.addVehicle()) {
+          if (lot.addVehicle(currentUser->getID())) {
             cout << "\nNhan Enter de tiep tuc...";
             waitEnter();
           }
@@ -170,7 +170,7 @@ int main() {
             c = Utils::readInt();
             switch (c) {
             case 1:
-              if (lot.addVehicle()) {
+              if (lot.addVehicle(currentUser->getID())) {
                 cout << "\nNhan Enter de tiep tuc...";
                 waitEnter();
               }
@@ -226,19 +226,22 @@ int main() {
               waitEnter();
               break;
             case 2:
-              lot.revenueByDay();
-              cout << "\nNhan Enter de tiep tuc...";
-              waitEnter();
+              if (lot.revenueByDay()) {
+                cout << "\nNhan Enter de tiep tuc...";
+                waitEnter();
+              }
               break;
             case 3:
-              lot.revenueByMonth();
-              cout << "\nNhan Enter de tiep tuc...";
-              waitEnter();
+              if (lot.revenueByMonth()) {
+                cout << "\nNhan Enter de tiep tuc...";
+                waitEnter();
+              }
               break;
             case 4:
-              lot.revenueByYear();
-              cout << "\nNhan Enter de tiep tuc...";
-              waitEnter();
+              if (lot.revenueByYear()) {
+                cout << "\nNhan Enter de tiep tuc...";
+                waitEnter();
+              }
               break;
             case 0:
               break;

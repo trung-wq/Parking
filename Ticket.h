@@ -14,17 +14,20 @@ private:
   time_t timeOut;
   string dateIn;
   string dateOut;
+  string employeeID;
 
 public:
   Ticket(string i) {
     id = i;
     time(&timeIn);
     dateIn = setDate(timeIn);
+    employeeID = "NONE";
   }
 
   Ticket() {
     id = "BICYCLE";
     time(&timeIn);
+    employeeID = "NONE";
   }
   string setDate(time_t d) {
     tm info;
@@ -37,6 +40,7 @@ public:
   void _setDateOut(string _dateOut) { dateOut = _dateOut; }
   void setTimeIn(time_t t) { timeIn = t; }
   void _setTimeOut(time_t t) { timeOut = t; }
+  void setEmployeeID(string eid) { employeeID = eid; }
   void setTimeOut() {
     time(&timeOut);
     dateOut = setDate(timeOut);
@@ -56,9 +60,11 @@ public:
   string getDateIn() { return dateIn; }
   string getDateOut() { return dateOut; }
   string getId() { return id; }
+  string getEmployeeID() { return employeeID; }
   void display() {
     cout << "Ma ve    : " << id << endl;
     cout << "Ngay vao : " << dateIn << endl;
     cout << "Gio vao  : " << formatTime(timeIn) << endl;
+    cout << "Nhan vien: " << employeeID << endl;
   }
 };

@@ -15,7 +15,7 @@ public:
   ParkingLot() : checker(storage), revenueManager(storage) {}
 
   // --- Quản lý xe ---
-  bool addVehicle() { return storage.addVehicle(); }
+  bool addVehicle(string empID) { return storage.addVehicle(empID); }
   bool removeVehicle() { return storage.removeVehicle(); }
 
   // --- Hiển thị & tìm kiếm ---
@@ -27,10 +27,10 @@ public:
   // --- Doanh thu & lịch sử ---
   void showRevenue() { revenueManager.showRevenue(); }
   void ShowHistory() { revenueManager.ShowHistory(); }
-  void revenueByDate() { revenueManager.revenueByDate(); }
-  void revenueByDay() { revenueManager.revenueByDay(); }
-  void revenueByMonth() { revenueManager.revenueByMonth(); }
-  void revenueByYear() { revenueManager.revenueByYear(); }
+  bool revenueByDate() { return revenueManager.revenueByDate(); }
+  bool revenueByDay() { return revenueManager.revenueByDay(); }
+  bool revenueByMonth() { return revenueManager.revenueByMonth(); }
+  bool revenueByYear() { return revenueManager.revenueByYear(); }
 
   // --- Quản lý nhân viên ---
   vector<Employee> &getEmployeeList() {

@@ -42,6 +42,6 @@ public:
   void loadHistoryFromFile();
 
   // --- Quản lý xe ---
-  bool addVehicle();
+  bool addVehicle(string empID);
   bool removeVehicle();
 };

@@ -210,11 +210,10 @@ void RevenueManager::ShowHistory() {
 // ============================================================
 //  Doanh thu theo chuỗi ngày nhập tay (dd/mm/yyyy)
 // ============================================================
-void RevenueManager::revenueByDate() {
+bool RevenueManager::revenueByDate() {
   stack<Vehicle *> &hist = storage.getHistory();
   if (hist.empty()) {
-    cout << "\n  [!] Chua co du lieu!!\n";
-    return;
+    return false;
   }
   string inputDate;
   cout << "Nhap ngay (dd/mm/yyyy): ";
@@ -241,15 +240,18 @@ void RevenueManager::revenueByDate() {
     printSummary(list);
     printRecords(list);
     sortMenu(list);
-  } else {
-    cout << "\n  [!] Ngay " << inputDate << " khong co doanh thu!\n";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    return true;
   }
+  cout << "\n  [!] Khong tim thay du lieu doanh thu trong thoi gian nay!\n";
+  cin.ignore(numeric_limits<streamsize>::max(), '\n');
+  return true;
 }
 
 // ============================================================
 //  Doanh thu theo ngày (nhập d m y) + sắp xếp
 // ============================================================
-void RevenueManager::revenueByDay() {
+bool RevenueManager::revenueByDay() {
   int d, m, y;
   while (true) {
     cout << "Nhap ngay thang nam (dd mm yyyy): ";
@@ -290,16 +292,18 @@ void RevenueManager::revenueByDay() {
     printSummary(list);
     printRecords(list);
     sortMenu(list);
-  } else {
-    cout << "\n  [!] Ngay " << d << "/" << m << "/" << y
-         << " khong co doanh thu!\n";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    return true;
   }
+  cout << "\n  [!] Khong tim thay du lieu doanh thu trong thoi gian nay!\n";
+  cin.ignore(numeric_limits<streamsize>::max(), '\n');
+  return true;
 }
 
 // ============================================================
 //  Doanh thu theo tháng + sắp xếp
 // ============================================================
-void RevenueManager::revenueByMonth() {
+bool RevenueManager::revenueByMonth() {
   int m, y;
   while (true) {
     cout << "Nhap thang nam (mm yyyy): ";
@@ -340,15 +344,18 @@ void RevenueManager::revenueByMonth() {
     printSummary(list);
     printRecords(list);
     sortMenu(list);
-  } else {
-    cout << "\n  [!] Thang " << m << "/" << y << " khong co doanh thu!\n";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    return true;
   }
+  cout << "\n  [!] Khong tim thay du lieu doanh thu trong thoi gian nay!\n";
+  cin.ignore(numeric_limits<streamsize>::max(), '\n');
+  return true;
 }
 
 // ============================================================
 //  Doanh thu theo năm + sắp xếp
 // ============================================================
-void RevenueManager::revenueByYear() {
+bool RevenueManager::revenueByYear() {
   int y;
   while (true) {
     cout << "Nhap nam: ";
@@ -389,7 +396,10 @@ void RevenueManager::revenueByYear() {
     printSummary(list);
     printRecords(list);
     sortMenu(list);
-  } else {
-    cout << "\n  [!] Nam " << y << " khong co doanh thu!\n";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    return true;
   }
+  cout << "\n  [!] Khong tim thay du lieu doanh thu trong thoi gian nay!\n";
+  cin.ignore(numeric_limits<streamsize>::max(), '\n');
+  return true;
 }
