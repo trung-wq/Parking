@@ -32,8 +32,8 @@ public:
 
   // --- Kiểm tra biển số trùng ---
   bool isDuplicatePlate(const string &plate);
-  // --- Nhập biển số hợp lệ ---
-  string readPlate(bool checkDuplicate);
+  // --- Nhập biển số hợp lệ --- (vehicleType: 2=xe máy, 3=ôtô)
+  string readPlate(bool checkDuplicate, int vehicleType = 0);
 
   // --- File I/O ---
   void saveToFile();

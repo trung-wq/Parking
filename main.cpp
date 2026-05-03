@@ -5,38 +5,41 @@
 
 using namespace std;
 
+// Chờ người dùng bấm Enter (buffer đã sạch, không cần sync)
+void waitEnter() { cin.get(); }
+
 // ============================================================
 //  Menus
 // ============================================================
 void menuEmployee() {
   cout << "\n=== QUAN LY NHAN VIEN ===\n";
-  cout << "1 Danh sach\n";
+  cout << "1 Danh sach nhan vien\n";
   cout << "2 Them nhan vien\n";
   cout << "3 Xoa nhan vien\n";
   cout << "4 Cap nhat nhan vien\n";
-  cout << "0 Quay lai\n";
+  cout << "0 Quay lai menu chinh\n";
   cout << "Chon: ";
 }
 
 void menuRevenue() {
   cout << "\n=== QUAN LY DOANH THU ===\n";
   cout << "1 Tong doanh thu\n";
-  cout << "2 Theo ngay\n";
-  cout << "3 Theo thang\n";
-  cout << "4 Theo nam\n";
-  cout << "0 Quay lai\n";
+  cout << "2 Doanh thu theo ngay\n";
+  cout << "3 Doanh thu theo thang\n";
+  cout << "4 Doanh thu theo nam\n";
+  cout << "0 Quay lai menu chinh\n";
   cout << "Chon: ";
 }
 
 void menuParking() {
   cout << "\n=== QUAN LY BAI XE ===\n";
-  cout << "1 Them xe\n";
-  cout << "2 Xe roi bai\n";
-  cout << "3 Danh sach xe\n";
-  cout << "4 Tim xe\n";
-  cout << "5 Lich su xe ra vao\n";
-  cout << "6 Vi tri trong con lai\n";
-  cout << "0 Quay lai\n";
+  cout << "1 Them xe moi\n";
+  cout << "2 Xe ra khoi bai\n";
+  cout << "3 Danh sach xe hien tai\n";
+  cout << "4 Tim kiem thong tin xe trong bai\n";
+  cout << "5 Danh sach cac xe da ra khoi bai\n";
+  cout << "6 Thong ke vi tri trong\n";
+  cout << "0 Quay lai menu chinh\n";
   cout << "Chon: ";
 }
 
@@ -51,24 +54,24 @@ void menuAdmin() {
 
 void menuNV() {
   cout << "\n===== QUAN LY BAI GIU XE =====\n";
-  cout << "1 Them xe\n";
-  cout << "2 Xe roi bai\n";
-  cout << "3 Danh sach xe\n";
-  cout << "4 Tim xe\n";
-  cout << "5 Vi tri trong con lai\n";
+  cout << "1 Them xe moi\n";
+  cout << "2 Xe ra khoi bai\n";
+  cout << "3 Danh sach xe hien tai\n";
+  cout << "4 Tim kiem thong tin xe trong bai\n";
+  cout << "5 Thong ke vi tri trong\n";
   cout << "0 Dang xuat\n";
   cout << "Chon: ";
 }
 
 // ============================================================
-//  Đăng nhập — tự vòng lặp đến khi đúng
+//  Đăng nhập
 // ============================================================
 Employee *login(vector<Employee> &users) {
   bool firstTime = true;
   while (true) {
     system("clear");
     if (!firstTime) {
-      cout << "  [!] Sai tai khoan hoac mat khau! Vui long thu lai.\n";
+      cout << "  [!] Username hoac Password khong dung. Vui long thu lai.\n";
     }
     firstTime = false;
 
@@ -88,16 +91,14 @@ Employee *login(vector<Employee> &users) {
   }
 }
 
-// ============================================================
-//  main
-// ============================================================
 int main() {
   ParkingLot lot;
   lot.loadEmployees();
+  lot.loadFromFile();
+  lot.loadHistoryFromFile();
 
   while (true) {
     Employee *currentUser = login(lot.getEmployeeList());
-    lot.loadHistoryFromFile();
 
     if (currentUser->getRole() == 2) {
       // -------- NHÂN VIÊN --------
@@ -112,43 +113,37 @@ int main() {
         case 1:
           if (lot.addVehicle()) {
             cout << "\nNhan Enter de tiep tuc...";
-            cin.ignore();
-            cin.get();
+            waitEnter();
           }
           break;
         case 2:
           if (lot.removeVehicle()) {
             cout << "\nNhan Enter de tiep tuc...";
-            cin.ignore();
-            cin.get();
+            waitEnter();
           }
           break;
         case 3:
           lot.display();
           cout << "\nNhan Enter de tiep tuc...";
-          cin.ignore();
-          cin.get();
+          waitEnter();
           break;
         case 4:
           if (lot.search()) {
             cout << "\nNhan Enter de tiep tuc...";
-            cin.ignore();
-            cin.get();
+            waitEnter();
           }
           break;
         case 5:
           lot.showAvailableSlots();
           cout << "\nNhan Enter de tiep tuc...";
-          cin.ignore();
-          cin.get();
+          waitEnter();
           break;
         case 0:
-          cout << "Dang xuat...\n";
+          cout << "Dang xuat thanh cong!\n";
           break;
         default:
-          cout << "  [!] Lua chon khong hop le!\n";
-          cin.ignore();
-          cin.get();
+          cout << "  [!] Lua chon khong hop le!\nChon: ";
+          waitEnter();
           break;
         }
       } while (choice != 0);
@@ -164,7 +159,7 @@ int main() {
 
         switch (choice) {
         case 4:
-          cout << "Dang xuat...\n";
+          cout << "Dang xuat thanh cong!\n";
           break;
 
         case 1: {
@@ -177,48 +172,41 @@ int main() {
             case 1:
               if (lot.addVehicle()) {
                 cout << "\nNhan Enter de tiep tuc...";
-                cin.ignore();
-                cin.get();
+                waitEnter();
               }
               break;
             case 2:
               if (lot.removeVehicle()) {
                 cout << "\nNhan Enter de tiep tuc...";
-                cin.ignore();
-                cin.get();
+                waitEnter();
               }
               break;
             case 3:
               lot.display();
               cout << "\nNhan Enter de tiep tuc...";
-              cin.ignore();
-              cin.get();
+              waitEnter();
               break;
             case 4:
               if (lot.search()) {
                 cout << "\nNhan Enter de tiep tuc...";
-                cin.ignore();
-                cin.get();
+                waitEnter();
               }
               break;
             case 5:
               lot.ShowHistory();
               cout << "\nNhan Enter de tiep tuc...";
-              cin.ignore();
-              cin.get();
+              waitEnter();
               break;
             case 6:
               lot.showAvailableSlots();
               cout << "\nNhan Enter de tiep tuc...";
-              cin.ignore();
-              cin.get();
+              waitEnter();
               break;
             case 0:
               break;
             default:
-              cout << "  [!] Lua chon khong hop le!\n";
-              cin.ignore();
-              cin.get();
+              cout << "  [!] Lua chon khong hop le!\nChon: ";
+              waitEnter();
               break;
             }
           } while (c != 0);
@@ -235,33 +223,28 @@ int main() {
             case 1:
               lot.showRevenue();
               cout << "\nNhan Enter de tiep tuc...";
-              cin.ignore();
-              cin.get();
+              waitEnter();
               break;
             case 2:
               lot.revenueByDay();
               cout << "\nNhan Enter de tiep tuc...";
-              cin.ignore();
-              cin.get();
+              waitEnter();
               break;
             case 3:
               lot.revenueByMonth();
               cout << "\nNhan Enter de tiep tuc...";
-              cin.ignore();
-              cin.get();
+              waitEnter();
               break;
             case 4:
               lot.revenueByYear();
               cout << "\nNhan Enter de tiep tuc...";
-              cin.ignore();
-              cin.get();
+              waitEnter();
               break;
             case 0:
               break;
             default:
-              cout << "  [!] Lua chon khong hop le!\n";
-              cin.ignore();
-              cin.get();
+              cout << "  [!] Lua chon khong hop le!\nChon: ";
+              waitEnter();
               break;
             }
           } while (c != 0);
@@ -278,33 +261,28 @@ int main() {
             case 1:
               lot.showEmployees();
               cout << "\nNhan Enter de tiep tuc...";
-              cin.ignore();
-              cin.get();
+              waitEnter();
               break;
             case 2:
               lot.addEmployee();
               cout << "\nNhan Enter de tiep tuc...";
-              cin.ignore();
-              cin.get();
+              waitEnter();
               break;
             case 3:
               lot.deleteEmployee();
               cout << "\nNhan Enter de tiep tuc...";
-              cin.ignore();
-              cin.get();
+              waitEnter();
               break;
             case 4:
               lot.updateEmployee();
               cout << "\nNhan Enter de tiep tuc...";
-              cin.ignore();
-              cin.get();
+              waitEnter();
               break;
             case 0:
               break;
             default:
-              cout << "  [!] Lua chon khong hop le!\n";
-              cin.ignore();
-              cin.get();
+              cout << "  [!] Lua chon khong hop le!\nChon: ";
+              waitEnter();
               break;
             }
           } while (c != 0);
@@ -312,9 +290,8 @@ int main() {
         }
 
         default:
-          cout << "  [!] Lua chon khong hop le!\n";
-          cin.ignore();
-          cin.get();
+          cout << "  [!] Lua chon khong hop le!\nChon: ";
+          waitEnter();
           break;
         }
 

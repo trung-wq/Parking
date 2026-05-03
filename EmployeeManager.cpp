@@ -29,14 +29,24 @@ void EmployeeManager::loadEmployees() {
 //  Hiển thị danh sách nhân viên
 // ============================================================
 void EmployeeManager::showEmployees() {
-  cout << "\n===== DANH SACH NHAN VIEN =====\n";
   if (emlist.empty()) {
-    cout << "  (Chua co nhan vien nao)\n";
+    cout << "\n  [!] Chua co nhan viên nao trong danh sach.\n";
     return;
   }
+  cout << "\n======================================================\n";
+  cout << "               DANH SACH NHAN VIEN                    \n";
+  cout << "======================================================\n";
+  cout << "  +----+------------+----------------------+----------+\n";
+  cout << "  | STT| ID         | Ho ten               | Chuc vu  |\n";
+  cout << "  +----+------------+----------------------+----------+\n";
+  int idx = 1;
   for (auto &e : emlist) {
-    e.display();
+    string roleStr = (e.getRole() == 1) ? "Admin" : "Staff";
+    cout << "  | " << left << setw(3) << idx++ << "| " << left << setw(11)
+         << e.getID() << "| " << left << setw(21) << e.getName() << "| "
+         << left << setw(9) << roleStr << "|\n";
   }
+  cout << "  +----+------------+----------------------+----------+\n";
 }
 
 // ============================================================
@@ -44,7 +54,6 @@ void EmployeeManager::showEmployees() {
 // ============================================================
 void EmployeeManager::addEmployee() {
   string id, name, pass;
-  cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
   while (true) {
     cout << "Nhap ID cua nhan vien: ";
@@ -105,7 +114,7 @@ void EmployeeManager::addEmployee() {
   Employee e(id, name, pass, 2);
   emlist.push_back(e);
   saveEmployees();
-  cout << "Them nhan vien thanh cong!\n";
+  cout << "\n  [+] Them nhan vien thanh cong!\n";
 }
 
 // ============================================================
@@ -113,17 +122,28 @@ void EmployeeManager::addEmployee() {
 // ============================================================
 void EmployeeManager::deleteEmployee() {
   string id;
-  cout << "Nhap ma NV can xoa: ";
-  cin >> id;
+  while (true) {
+    cout << "Nhap ma NV can xoa: ";
+    getline(cin, id);
+    if (id.empty()) {
+      cout << "  [!] Khong duoc de trong!\n";
+      continue;
+    }
+    if (Utils::hasInvalidChar(id)) {
+      cout << "  [!] ID khong hop le (khong chua khoang trang/ky tu dac biet)!\n";
+      continue;
+    }
+    break;
+  }
   for (auto it = emlist.begin(); it != emlist.end(); ++it) {
     if (it->getID() == id) {
       emlist.erase(it);
       saveEmployees();
-      cout << "Da xoa!\n";
+      cout << "  [+] Da xoa nhan vien!\n";
       return;
     }
   }
-  cout << "Khong tim thay!\n";
+  cout << "  [!] Khong tim thay nhan vien!\n";
 }
 
 // ============================================================
@@ -131,13 +151,23 @@ void EmployeeManager::deleteEmployee() {
 // ============================================================
 void EmployeeManager::updateEmployee() {
   string id;
-  cout << "Nhap ma nhan vien can sua: ";
-  cin >> id;
+  while (true) {
+    cout << "Nhap ma nhan vien can cap nhat: ";
+    getline(cin, id);
+    if (id.empty()) {
+      cout << "  [!] Khong duoc de trong!\n";
+      continue;
+    }
+    if (Utils::hasInvalidChar(id)) {
+      cout << "  [!] ID khong hop le (khong chua khoang trang/ky tu dac biet)!\n";
+      continue;
+    }
+    break;
+  }
   for (auto &e : emlist) {
     if (e.getID() == id) {
-      cout << "Tim thay nhan vien!\n";
+      cout << "  [+] Tim thay nhan vien: " << e.getName() << "!\n";
       string name, pass;
-      cin.ignore(numeric_limits<streamsize>::max(), '\n');
 
       while (true) {
         cout << "Ten moi: ";
@@ -173,9 +203,9 @@ void EmployeeManager::updateEmployee() {
       e.setName(name);
       e.setPassword(pass);
       saveEmployees();
-      cout << "Cap nhat thanh cong!\n";
+      cout << "  [+] Cap nhat thanh cong!\n";
       return;
     }
   }
-  cout << "Khong tim thay nhan vien!\n";
+  cout << "  [!] Khong tim thay nhan vien!\n";
 }

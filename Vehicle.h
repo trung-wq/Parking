@@ -38,8 +38,10 @@ public:
   virtual int calculateFee() = 0;
 
   virtual void display() {
-    cout << "Bien so: " << plate << endl;
     ticket.display();
+    if (!plate.empty()) {
+      cout << "Bien so  : " << plate << endl;
+    }
   }
   virtual int getType() = 0;
 };

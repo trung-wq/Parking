@@ -21,15 +21,15 @@ void ParkingChecker::showAvailableSlots() {
   cout << "========================================\n";
   cout << "  Loai xe   | Da dung | Con trong | Tong\n";
   cout << "----------------------------------------\n";
-  cout << "  Xe dap    |   " << countBicycle << "     |    " << remBicycle
-       << "     |  " << maxBicycle << "\n";
-  cout << "  Xe may    |   " << countMotorbike << "    |    " << remMotorbike
-       << "    |  " << maxMotorbike << "\n";
+  cout << "  Xe dap    |   " << countBicycle << "    |    " << remBicycle
+       << "      |  " << maxBicycle << "\n";
+  cout << "  Xe may    |   " << countMotorbike << "     |    " << remMotorbike
+       << "     |  " << maxMotorbike << "\n";
   cout << "  O to      |   " << countCar << "     |    " << remCar << "     |  "
        << maxCar << "\n";
   cout << "----------------------------------------\n";
   cout << "  Tong cong |   " << usedTotal << "    |    " << remTotal
-       << "    |  " << maxTotal << "\n";
+       << "     |  " << maxTotal << "\n";
   cout << "========================================\n";
 }
 
@@ -96,10 +96,10 @@ void ParkingChecker::display() {
       string date = v->getTicket().getDateIn();
       string time = v->formatTime(v->getTicket().getTimeIn());
       cout << "  | " << left << setw(3) << idx++ << "| " << left << setw(11)
-           << plate << "| " << left << setw(11) << id << "| " << left << setw(9)
-           << date << "| " << left << setw(6) << time << "|\n";
+           << plate << "| " << left << setw(11) << id << "| " << left
+           << setw(11) << date << "| " << left << setw(6) << time << "|\n";
     }
-    cout << "  +----+------------+------------+----------+-------+\n";
+    cout << "  +----+------------+------------+------------+-------+\n";
   };
 
   cout << "\n========================================\n";
@@ -120,21 +120,26 @@ void ParkingChecker::display() {
 bool ParkingChecker::search() {
   queue<Vehicle *> &pq = storage.getQueue();
   if (pq.empty()) {
-    cout << "Hien tai khong co xe nao trong bai!\n";
+    cout << "\n  [!] Hien tai khong co xe nao trong bai!\n";
     return true;
   }
-  cout << "1 Nhap ve\n2 Nhap bien so\n3 Quay lai\nChon: ";
+
+  cout << "\n---------- TIM KIEM XE ----------\n";
+  cout << "  1. Theo ma ve\n";
+  cout << "  2. Theo bien so\n";
+  cout << "  3. Quay lai\n";
+  cout << "-------------------------------\n";
+  cout << "  Chon: ";
   int opt = Utils::readMenuChoice(1, 3);
   if (opt == 3)
     return false;
 
   string inputStr;
-  cin.ignore(numeric_limits<streamsize>::max(), '\n');
   while (true) {
     if (opt == 1)
-      cout << "Nhap vao ma ve: ";
+      cout << "  Nhap ma ve: ";
     else
-      cout << "Nhap vao bien so: ";
+      cout << "  Nhap bien so: ";
     getline(cin, inputStr);
 
     if (inputStr.empty()) {
@@ -142,12 +147,7 @@ bool ParkingChecker::search() {
       continue;
     }
     if (Utils::hasInvalidChar(inputStr)) {
-      if (opt == 1)
-        cout << "  [!] Ma ve chi duoc chua chu cai hoac so (khong khoang "
-                "trang/ky tu dac biet)!\n";
-      else
-        cout << "  [!] Bien so chi duoc chua chu cai hoac so (khong khoang "
-                "strang/ky tu dac biet)!\n";
+      cout << "  [!] Chi chap nhan chu cai va so!\n";
       continue;
     }
 
@@ -158,26 +158,26 @@ bool ParkingChecker::search() {
   queue<Vehicle *> temp = pq;
   bool found = false;
   while (!temp.empty()) {
+    Vehicle *v = temp.front();
     bool isMatch = false;
-    if (opt == 1 && temp.front()->getTicket().getId() == inputStr)
+    if (opt == 1 && v->getTicket().getId() == inputStr)
       isMatch = true;
-    else if (opt == 2 && temp.front()->getPlate() == inputStr &&
-             !temp.front()->getPlate().empty())
+    else if (opt == 2 && v->getPlate() == inputStr && !v->getPlate().empty())
       isMatch = true;
 
     if (isMatch) {
-      cout << "Tim thay:\n";
-      temp.front()->display();
+      cout << "\n========================================\n";
+      cout << "         THONG TIN XE TIM THAY\n";
+      cout << "========================================\n";
+      v->display();
+      cout << "========================================\n";
       found = true;
       return true;
     }
     temp.pop();
   }
   if (!found) {
-    if (opt == 1)
-      cout << "Khong tim thay xe co ma ve: " << inputStr << "\n";
-    else
-      cout << "Khong tim thay xe co bien so: " << inputStr << "\n";
+    cout << "\n  [!] KHONG TIM THAY XE: " << inputStr << "\n";
   }
   return true;
 }

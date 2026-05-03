@@ -37,7 +37,7 @@ bool ParkingStorage::isDuplicatePlate(const string &plate) {
 // ============================================================
 //  Nhập biển số hợp lệ và kiểm tra trùng biển số
 // ============================================================
-string ParkingStorage::readPlate(bool checkDuplicate) {
+string ParkingStorage::readPlate(bool checkDuplicate, int vehicleType) {
   string plate;
   while (true) {
     cout << "Nhap bien so: ";
@@ -47,13 +47,35 @@ string ParkingStorage::readPlate(bool checkDuplicate) {
       cout << "  [!] Khong duoc de trong!\n";
       continue;
     }
-    if (!Utils::isValidPlate(plate)) {
-      cout << "  [!] Bien so khong hop le (6-10 ky tu, chu/so, khong khoang "
-              "trang)!\n";
-      continue;
+
+    // Validate theo loại xe
+    bool valid = false;
+    if (vehicleType == 2) {
+      // Xe máy: 2 số + 1-2 chữ + 4-5 số, VD: 29B12345, 51G112345
+      valid = Utils::isValidMotorbikePlate(plate);
+      if (!valid) {
+        cout << "  [-] Bien so xe may khong dung dinh dang!\n";
+        cout << "      (VD hop le: 29B12345, 30AB1234)\n";
+        continue;
+      }
+    } else if (vehicleType == 3) {
+      // O to: 2 số + đúng 1 chữ cái + 4-5 số, VD: 51F1234, 29A56789
+      valid = Utils::isValidCarPlate(plate);
+      if (!valid) {
+        cout << "  [-] Bien so o to khong dung dinh dang!\n";
+        cout << "      (VD hop le: 29A12345, 51F1234)\n";
+        continue;
+      }
+    } else {
+      // Kiểm tra chung (xe đạp hoặc fallback)
+      if (!Utils::isValidPlate(plate)) {
+        cout << "  [-] Bien so khong hop le (6-10 ky tu)!\n";
+        continue;
+      }
     }
+
     if (checkDuplicate && isDuplicatePlate(plate)) {
-      cout << "  [!] Bien so da ton tai trong bai!\n";
+      cout << "  [!] Bien so " << plate << " da ton tai trong bai!\n";
       continue;
     }
     return plate;
@@ -114,6 +136,7 @@ void ParkingStorage::loadHistoryFromFile() {
     return;
   }
   history = stack<Vehicle *>();
+  revenue = 0; // Reset doanh thu để tính lại từ đầu file lịch sử
   int type, fee;
   string plate, Indate, Outdate;
   time_t timeIn, timeOut;
@@ -122,14 +145,6 @@ void ParkingStorage::loadHistoryFromFile() {
     if (type == 1) {
       string tid = (plate == "NONE") ? "T" : plate;
       v = new Bicycle("", tid);
-      if (tid.size() > 1 && tid[0] == 'T') {
-        try {
-          int num = stoi(tid.substr(1));
-          if (num >= ticketCounter)
-            ticketCounter = num + 1;
-        } catch (...) {
-        }
-      }
     } else if (type == 2) {
       if (plate == "NONE")
         plate = "";
@@ -144,6 +159,7 @@ void ParkingStorage::loadHistoryFromFile() {
     v->getTicket()._setDateOut(Outdate);
     v->getTicket()._setTimeOut(timeOut);
     history.push(v);
+    revenue += fee; // Khôi phục doanh thu
   }
   in.close();
   // cout << "Da tai lich su tu file!\n";
@@ -194,11 +210,14 @@ void ParkingStorage::loadFromFile() {
 //  Quản lý xe: thêm xe
 // ============================================================
 bool ParkingStorage::addVehicle() {
-  if (parkingQueue.empty())
-    loadFromFile();
 
-  // Bước 1: Chọn loại xe
-  cout << "1 Xe dap\n2 Xe may\n3 O to\n4 Quay lai\nChon: ";
+  cout << "\n---------- THEM XE VAO BAI GIU XE ----------\n";
+  cout << "  1. Xe dap\n";
+  cout << "  2. Xe may\n";
+  cout << "  3. O to\n";
+  cout << "  4. Quay lai\n";
+  cout << "--------------------------------------------\n";
+  cout << "  Chon loai xe: ";
   int type = Utils::readMenuChoice(1, 4);
   if (type == 4)
     return false;
@@ -208,39 +227,39 @@ bool ParkingStorage::addVehicle() {
   countVehicles(countBicycle, countMotorbike, countCar);
   const int maxBicycle = 20, maxMotorbike = 40, maxCar = 30;
 
-  if ((type == 1 && countBicycle >= maxBicycle) ||
-      (type == 2 && countMotorbike >= maxMotorbike) ||
-      (type == 3 && countCar >= maxCar)) {
-    cout << "\n====== THONG BAO ======\n";
+  bool isFull = false;
+  if (type == 1 && countBicycle >= maxBicycle)
+    isFull = true;
+  else if (type == 2 && countMotorbike >= maxMotorbike)
+    isFull = true;
+  else if (type == 3 && countCar >= maxCar)
+    isFull = true;
+
+  if (isFull) {
+    cout << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
+    cout << "          THONG BAO: HET CHO!\n";
+    cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
     if (type == 1)
-      cout << "Het cho! Bai do xe dap da day (" << maxBicycle << "/"
-           << maxBicycle << " cho).\n";
+      cout << "  Xe dap da day (" << maxBicycle << "/" << maxBicycle << ")\n";
     else if (type == 2)
-      cout << "Het cho! Bai do xe may da day (" << maxMotorbike << "/"
-           << maxMotorbike << " cho).\n";
+      cout << "  Xe may da day (" << maxMotorbike << "/" << maxMotorbike
+           << ")\n";
     else
-      cout << "Het cho! Bai do xe o to da day (" << maxCar << "/" << maxCar
-           << " cho).\n";
-    cout << "\n--- Vi tri trong con lai ---\n";
-    cout << "  Xe dap : " << (maxBicycle - countBicycle) << " cho trong / "
-         << maxBicycle << " cho\n";
-    cout << "  Xe may : " << (maxMotorbike - countMotorbike) << " cho trong / "
-         << maxMotorbike << " cho\n";
-    cout << "  O to   : " << (maxCar - countCar) << " cho trong / " << maxCar
-         << " cho\n";
-    cout << "  Tong   : "
-         << (maxBicycle + maxMotorbike + maxCar - countBicycle -
-             countMotorbike - countCar)
-         << " cho trong / " << (maxBicycle + maxMotorbike + maxCar) << " cho\n";
-    cout << "=======================\n";
+      cout << "  O to da day (" << maxCar << "/" << maxCar << ")\n";
+
+    cout << "\n  --- Vi tri trong con lai ---\n";
+    cout << "  Xe dap : " << (maxBicycle - countBicycle) << " cho trong\n";
+    cout << "  Xe may : " << (maxMotorbike - countMotorbike) << " cho trong\n";
+    cout << "  O to   : " << (maxCar - countCar) << " cho trong\n";
+    cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
     return true;
   }
 
   // Bước 2: Nhập biển số
   string plate;
-  cin.ignore(numeric_limits<streamsize>::max(), '\n');
   if (type != 1) {
-    plate = readPlate(true);
+    cout << "  Vui long nhap thong tin xe:\n";
+    plate = readPlate(true, type); // truyền type để validate đúng định dạng
   }
 
   using Factory = function<Vehicle *(const string &, const string &)>;
@@ -258,9 +277,13 @@ bool ParkingStorage::addVehicle() {
   Vehicle *v = vehicleFactory.at(type)(plate, ticketID);
 
   parkingQueue.push(v);
-  v->getTicket().display();
+
+  cout << "\n========================================";
+  cout << "\n           THEM XE THANH CONG!          ";
+  cout << "\n========================================\n";
+  v->display();
+  cout << "========================================\n";
   saveToFile();
-  cout << "Them xe thanh cong!\n";
   return true;
 }
 
@@ -279,8 +302,6 @@ bool ParkingStorage::removeVehicle() {
     return false;
 
   string inputStr;
-  cin.ignore(numeric_limits<streamsize>::max(), '\n');
-
   if (opt == 1) {
     while (true) {
       cout << "Nhap vao ma ve: ";
@@ -298,6 +319,7 @@ bool ParkingStorage::removeVehicle() {
       break;
     }
   } else {
+    // Tìm xe theo biển số — không biết loại xe, dùng kiểm tra chung
     inputStr = readPlate(false);
   }
 
@@ -318,13 +340,17 @@ bool ParkingStorage::removeVehicle() {
     if (!found && isMatch) {
       v->getTicket().setTimeOut();
       int fee = v->calculateFee();
-      cout << "\n============================\n"
-           << "  XE ROI BAI THANH CONG\n"
-           << "============================\n";
+      cout << "\n========================================";
+      cout << "\n         XE ROI BAI THANH CONG        ";
+      cout << "\n========================================\n";
       v->display();
-      cout << "Tien gui: " << fee << " VND\n"
-           << "============================\n";
+      cout << "Ngay ra  : " << v->getTicket().getDateOut() << endl;
+      cout << "Gio ra   : " << v->formatTime(v->getTicket().getTimeOut())
+           << endl;
+      cout << "Tien gui : " << fee << " VND\n";
+      cout << "========================================\n";
       revenue += fee;
+
       history.push(v);
       found = true;
     } else {

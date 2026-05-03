@@ -1,4 +1,5 @@
 #include "RevenueManager.h"
+#include <iomanip>
 using namespace std;
 
 static void getDateParts(time_t t, int &d, int &m, int &y) {
@@ -54,12 +55,51 @@ static bool isValidYear(int y) {
   return y <= cur_y;
 }
 
-// In danh sách kết quả thống kê
-static void printRecords(const vector<Record> &list) {
-  cout << "\n===== KET QUA =====\n";
-  for (auto &r : list) {
-    cout << r.plate << " | " << r.date << " | " << r.fee << " VND\n";
+static void printSummary(const vector<Record> &list) {
+  int dCount = 0, mCount = 0, cCount = 0;
+  int dFee = 0, mFee = 0, cFee = 0;
+  for (const auto &r : list) {
+    if (r.type == 1) {
+      dCount++;
+      dFee += r.fee;
+    } else if (r.type == 2) {
+      mCount++;
+      mFee += r.fee;
+    } else if (r.type == 3) {
+      cCount++;
+      cFee += r.fee;
+    }
   }
+  cout << "\n  --- TOM TAT THEO LOAI XE ---\n";
+  cout << "  Xe dap : " << left << setw(3) << dCount << " luot | " << right
+       << setw(10) << dFee << " VND\n";
+  cout << "  Xe may : " << left << setw(3) << mCount << " luot | " << right
+       << setw(10) << mFee << " VND\n";
+  cout << "  O to   : " << left << setw(3) << cCount << " luot | " << right
+       << setw(10) << cFee << " VND\n";
+  cout << "  ----------------------------\n";
+  cout << "  TONG   : " << left << setw(3) << (dCount + mCount + cCount)
+       << " luot | " << right << setw(10) << (dFee + mFee + cFee) << " VND\n";
+}
+
+static void printRecords(const vector<Record> &list) {
+  if (list.empty()) {
+    cout << "\n  [!] Khong co du lieu trong thoi gian nay.\n";
+    return;
+  }
+  cout << "\n  +----+------------+----------+------------+------------+\n";
+  cout << "  | STT| Bien so    | Loai xe  | Ngay ra    | Tien (VND) |\n";
+  cout << "  +----+------------+----------+------------+------------+\n";
+  int idx = 1;
+  for (auto &r : list) {
+    string plate = r.plate.empty() ? "NONE" : r.plate;
+    string typeStr =
+        (r.type == 1) ? "Xe dap" : (r.type == 2 ? "Xe may" : "O to");
+    cout << "  | " << left << setw(3) << idx++ << "| " << left << setw(11)
+         << plate << "| " << left << setw(9) << typeStr << "| " << left
+         << setw(11) << r.date << "| " << left << setw(11) << r.fee << "|\n";
+  }
+  cout << "  +----+------------+----------+------------+------------+\n";
 }
 
 // Menu sắp xếp chung
@@ -69,7 +109,7 @@ static void sortMenu(vector<Record> &list) {
     cout << "\nSap xep:\n";
     cout << "1 Tang dan theo tien\n";
     cout << "2 Giam dan theo tien\n";
-    cout << "3 Thoat\n";
+    cout << "3 Quay lai menu thong ke\n";
     cout << "Chon: ";
     while (!(cin >> opt) || opt < 1 || opt > 3) {
       cin.clear();
@@ -91,7 +131,9 @@ static void sortMenu(vector<Record> &list) {
 //  Tổng doanh thu
 // ============================================================
 void RevenueManager::showRevenue() {
+  cout << "\n====== KET QUA ======\n";
   cout << "Tong doanh thu: " << storage.getRevenue() << " VND\n";
+  cout << "=====================\n";
 }
 
 // ============================================================
@@ -100,20 +142,69 @@ void RevenueManager::showRevenue() {
 void RevenueManager::ShowHistory() {
   stack<Vehicle *> &hist = storage.getHistory();
   if (hist.empty()) {
-    cout << "Chua co xe nao roi bai!\n";
+    cout << "\n  [!] Chua co xe nao roi bai!\n";
     return;
   }
+
+  vector<Vehicle *> bicycles, motorbikes, cars;
   stack<Vehicle *> temp = hist;
-  cout << "\n===== LICH SU XE ROI BAI =====\n";
   while (!temp.empty()) {
     Vehicle *v = temp.top();
-    v->display();
-    cout << "Gio ra: " << v->formatTime(v->getTicket().getTimeOut()) << endl;
-    cout << "Ngay ra: " << v->getTicket().getDateOut() << endl;
-    cout << "Tien: " << v->calculateFee() << " VND\n";
-    cout << "----------------------\n";
+    if (v->getType() == 1)
+      bicycles.push_back(v);
+    else if (v->getType() == 2)
+      motorbikes.push_back(v);
+    else if (v->getType() == 3)
+      cars.push_back(v);
     temp.pop();
   }
+
+  auto printGroup = [](const string &title, const string &icon,
+                       vector<Vehicle *> &list) {
+    if (list.empty())
+      return;
+    cout << "\n  " << icon << " " << title << " (" << list.size() << " luot)\n";
+    cout << "  "
+            "+----+------------+------------+------------+-------+------------+"
+            "-------+-----------+\n";
+    cout << "  | STT| Bien so    | Ma ve      | Ngay vao   | Gio   | Ngay ra   "
+            " | Gio   | Phi (VND) |\n";
+    cout << "  "
+            "+----+------------+------------+------------+-------+------------+"
+            "-------+-----------+\n";
+    int idx = 1;
+    for (Vehicle *v : list) {
+      string plate = v->getPlate().empty() ? "NONE" : v->getPlate();
+      string id = v->getTicket().getId();
+      string dateIn = v->getTicket().getDateIn();
+      string timeIn = v->formatTime(v->getTicket().getTimeIn());
+      string dateOut = v->getTicket().getDateOut();
+      string timeOut = v->formatTime(v->getTicket().getTimeOut());
+      int fee = v->calculateFee();
+      cout << "  | " << left << setw(3) << idx++ << "| " << left << setw(11)
+           << plate << "| " << left << setw(11) << id << "| " << left
+           << setw(11) << dateIn << "| " << left << setw(6) << timeIn << "| "
+           << left << setw(11) << dateOut << "| " << left << setw(6) << timeOut
+           << "| " << left << setw(10) << fee << "|\n";
+    }
+    cout << "  "
+            "+----+------------+------------+------------+-------+------------+"
+            "-------+-----------+\n";
+  };
+
+  cout << "\n=================================================================="
+          "======================\n";
+  cout << "                           LICH SU XE DA ROI BAI\n";
+  cout << "===================================================================="
+          "====================\n";
+  printGroup("XE DAP", "[DAP]", bicycles);
+  printGroup("XE MAY", "[MAY]", motorbikes);
+  printGroup("O TO", "[OTO]", cars);
+
+  int total = bicycles.size() + motorbikes.size() + cars.size();
+  cout << "\n  Tong cong: " << total << " luot xe da roi bai.\n";
+  cout << "===================================================================="
+          "====================\n";
 }
 
 // ============================================================
@@ -122,27 +213,37 @@ void RevenueManager::ShowHistory() {
 void RevenueManager::revenueByDate() {
   stack<Vehicle *> &hist = storage.getHistory();
   if (hist.empty()) {
-    cout << "Chua co du lieu!!\n";
+    cout << "\n  [!] Chua co du lieu!!\n";
     return;
   }
   string inputDate;
   cout << "Nhap ngay (dd/mm/yyyy): ";
   cin >> inputDate;
+
+  vector<Record> list;
   stack<Vehicle *> temp = hist;
   int total = 0;
-  bool found = false;
   while (!temp.empty()) {
     Vehicle *v = temp.top();
     if (v->getTicket().getDateOut() == inputDate) {
-      total += v->calculateFee();
-      found = true;
+      int fee = v->calculateFee();
+      list.push_back(
+          {v->getPlate(), v->getTicket().getDateOut(), fee, v->getType()});
+      total += fee;
     }
     temp.pop();
   }
-  if (found)
-    cout << "Doanh thu ngay " << inputDate << " la: " << total << " VND\n";
-  else
-    cout << "Ngay hom do khong co doanh thu!\n";
+
+  if (!list.empty()) {
+    cout << "\n========================================\n";
+    cout << "   DOANH THU NGAY: " << inputDate << endl;
+    cout << "========================================\n";
+    printSummary(list);
+    printRecords(list);
+    sortMenu(list);
+  } else {
+    cout << "\n  [!] Ngay " << inputDate << " khong co doanh thu!\n";
+  }
 }
 
 // ============================================================
@@ -175,16 +276,24 @@ void RevenueManager::revenueByDay() {
     getDateParts(v->getTicket().getTimeOut(), dd, mm, yy);
     if (dd == d && mm == m && yy == y) {
       int fee = v->calculateFee();
-      list.push_back({v->getPlate(), v->getTicket().getDateOut(), fee});
+      list.push_back(
+          {v->getPlate(), v->getTicket().getDateOut(), fee, v->getType()});
       total += fee;
     }
     temp.pop();
   }
 
-  printRecords(list);
-  cout << "Doanh thu ngay " << d << "/" << m << "/" << y << " = " << total
-       << " VND\n";
-  sortMenu(list);
+  if (!list.empty()) {
+    cout << "\n========================================\n";
+    cout << "   DOANH THU NGAY: " << d << "/" << m << "/" << y << endl;
+    cout << "========================================\n";
+    printSummary(list);
+    printRecords(list);
+    sortMenu(list);
+  } else {
+    cout << "\n  [!] Ngay " << d << "/" << m << "/" << y
+         << " khong co doanh thu!\n";
+  }
 }
 
 // ============================================================
@@ -217,15 +326,23 @@ void RevenueManager::revenueByMonth() {
     getDateParts(v->getTicket().getTimeOut(), dd, mm, yy);
     if (mm == m && yy == y) {
       int fee = v->calculateFee();
-      list.push_back({v->getPlate(), v->getTicket().getDateOut(), fee});
+      list.push_back(
+          {v->getPlate(), v->getTicket().getDateOut(), fee, v->getType()});
       total += fee;
     }
     temp.pop();
   }
 
-  printRecords(list);
-  cout << "Doanh thu thang " << m << "/" << y << " = " << total << " VND\n";
-  sortMenu(list);
+  if (!list.empty()) {
+    cout << "\n========================================\n";
+    cout << "   DOANH THU THANG: " << m << "/" << y << endl;
+    cout << "========================================\n";
+    printSummary(list);
+    printRecords(list);
+    sortMenu(list);
+  } else {
+    cout << "\n  [!] Thang " << m << "/" << y << " khong co doanh thu!\n";
+  }
 }
 
 // ============================================================
@@ -258,13 +375,21 @@ void RevenueManager::revenueByYear() {
     getDateParts(v->getTicket().getTimeOut(), dd, mm, yy);
     if (yy == y) {
       int fee = v->calculateFee();
-      list.push_back({v->getPlate(), v->getTicket().getDateOut(), fee});
+      list.push_back(
+          {v->getPlate(), v->getTicket().getDateOut(), fee, v->getType()});
       total += fee;
     }
     temp.pop();
   }
 
-  printRecords(list);
-  cout << "Doanh thu nam " << y << " = " << total << " VND\n";
-  sortMenu(list);
+  if (!list.empty()) {
+    cout << "\n========================================\n";
+    cout << "   DOANH THU NAM: " << y << endl;
+    cout << "========================================\n";
+    printSummary(list);
+    printRecords(list);
+    sortMenu(list);
+  } else {
+    cout << "\n  [!] Nam " << y << " khong co doanh thu!\n";
+  }
 }

@@ -8,6 +8,7 @@ struct Record {
   string plate;
   string date;
   int fee;
+  int type; // 1=Dap, 2=May, 3=Oto
 };
 
 // Module chịu trách nhiệm: thống kê doanh thu, lịch sử xe ra

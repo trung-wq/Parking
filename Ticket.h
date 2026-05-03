@@ -57,10 +57,8 @@ public:
   string getDateOut() { return dateOut; }
   string getId() { return id; }
   void display() {
-    tm t;
-    localtime_r(&timeIn, &t);
-    cout << "Ve: " << id << endl;
-    cout << "Ngay vao: " << dateIn << endl;
-    cout << "Gio vao: " << formatTime(timeIn) << endl;
+    cout << "Ma ve    : " << id << endl;
+    cout << "Ngay vao : " << dateIn << endl;
+    cout << "Gio vao  : " << formatTime(timeIn) << endl;
   }
 };

@@ -16,8 +16,15 @@ string normalizeString(const string &str);
 // chữ và số)
 bool hasInvalidChar(const string &str);
 
-// 3. Kiểm tra tính hợp lệ của biển số (6-10 ký tự, không ký tự đặc biệt)
+// 3. Kiểm tra tính hợp lệ của biển số chung (6-10 ký tự, không ký tự đặc biệt)
 bool isValidPlate(const string &plate);
+
+// 3a. Kiểm tra biển số xe máy Việt Nam: 2 số + 1-2 chữ cái + 4-5 số (VD:
+// 29B12345)
+bool isValidMotorbikePlate(const string &plate);
+
+// 3b. Kiểm tra biển số ôtô Việt Nam: 2 số + 1-2 chữ cái + 4-5 số (VD: 51F1234)
+bool isValidCarPlate(const string &plate);
 
 // 4. Nhập và kiểm tra một số nguyên hợp lệ (>= 0)
 int readInt();
