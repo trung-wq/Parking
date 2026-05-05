@@ -47,34 +47,13 @@ bool isValidCarPlate(const string &plate) {
   return regex_match(plate, pattern);
 }
 
-int readInt() {
-  int value;
-  while (true) {
-    if (cin >> value) {
-      char next = cin.peek();
-      if (next == '\n' || next == EOF) {
-        cin.ignore(); // tiêu thụ '\n', buffer sạch khi return
-        if (value >= 0)
-          return value;
-        cout << "  [!] Vui long nhap so duong!\nChon: ";
-        continue;
-      }
-      cin.ignore(numeric_limits<streamsize>::max(), '\n');
-    } else {
-      cin.clear();
-      cin.ignore(numeric_limits<streamsize>::max(), '\n');
-    }
-    cout << "  [!] Lua chon khong hop le! Vui long chi nhap so nguyen.\nChon: ";
-  }
-}
-
 int readMenuChoice(int lo, int hi) {
   int val;
   while (true) {
     if (cin >> val) {
       char next = cin.peek();
       if (next == '\n' || next == EOF) {
-        cin.ignore();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
         if (val >= lo && val <= hi)
           return val;
         cout << "  [!] Vui long chon tu " << lo << " den " << hi << "!\nChon: ";

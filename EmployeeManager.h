@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 
-// Module chịu trách nhiệm: quản lý danh sách nhân viên, file I/O nhân viên
 class EmployeeManager {
 private:
   vector<Employee> emlist;

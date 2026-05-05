@@ -34,7 +34,7 @@ void ParkingChecker::showAvailableSlots() {
 }
 
 // ============================================================
-//  Danh sách xe đơn giản (dùng trong menu chính)
+//  Danh sách xe đang trong bãi
 // ============================================================
 void ParkingChecker::showListParking() {
   storage.loadFromFile();

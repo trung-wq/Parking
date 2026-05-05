@@ -5,12 +5,8 @@
 
 using namespace std;
 
-// Chờ người dùng bấm Enter (buffer đã sạch, không cần sync)
 void waitEnter() { cin.get(); }
 
-// ============================================================
-//  Menus
-// ============================================================
 void menuEmployee() {
   cout << "\n=== QUAN LY NHAN VIEN ===\n";
   cout << "1 Danh sach nhan vien\n";
@@ -107,7 +103,7 @@ int main() {
         system("clear");
         // lot.showListParking();
         menuNV();
-        choice = Utils::readInt();
+        choice = Utils::readMenuChoice(0, 5);
 
         switch (choice) {
         case 1:
@@ -140,9 +136,7 @@ int main() {
           break;
         case 0:
           cout << "Dang xuat thanh cong!\n";
-          break;
-        default:
-          cout << "  [!] Lua chon khong hop le!\nChon: ";
+          cout << "Nhan Enter de tiep tuc...";
           waitEnter();
           break;
         }
@@ -155,11 +149,13 @@ int main() {
         system("clear");
         // lot.showListParking();
         menuAdmin();
-        choice = Utils::readInt();
+        choice = Utils::readMenuChoice(1, 4);
 
         switch (choice) {
         case 4:
           cout << "Dang xuat thanh cong!\n";
+          cout << "Nhan Enter de tiep tuc...";
+          waitEnter();
           break;
 
         case 1: {
@@ -167,7 +163,7 @@ int main() {
           do {
             system("clear");
             menuParking();
-            c = Utils::readInt();
+            c = Utils::readMenuChoice(0, 6);
             switch (c) {
             case 1:
               if (lot.addVehicle(currentUser->getID())) {
@@ -204,10 +200,6 @@ int main() {
               break;
             case 0:
               break;
-            default:
-              cout << "  [!] Lua chon khong hop le!\nChon: ";
-              waitEnter();
-              break;
             }
           } while (c != 0);
           break;
@@ -218,7 +210,7 @@ int main() {
           do {
             system("clear");
             menuRevenue();
-            c = Utils::readInt();
+            c = Utils::readMenuChoice(0, 4);
             switch (c) {
             case 1:
               lot.showRevenue();
@@ -245,10 +237,6 @@ int main() {
               break;
             case 0:
               break;
-            default:
-              cout << "  [!] Lua chon khong hop le!\nChon: ";
-              waitEnter();
-              break;
             }
           } while (c != 0);
           break;
@@ -259,7 +247,7 @@ int main() {
           do {
             system("clear");
             menuEmployee();
-            c = Utils::readInt();
+            c = Utils::readMenuChoice(0, 4);
             switch (c) {
             case 1:
               lot.showEmployees();
@@ -283,21 +271,11 @@ int main() {
               break;
             case 0:
               break;
-            default:
-              cout << "  [!] Lua chon khong hop le!\nChon: ";
-              waitEnter();
-              break;
             }
           } while (c != 0);
           break;
         }
-
-        default:
-          cout << "  [!] Lua chon khong hop le!\nChon: ";
-          waitEnter();
-          break;
         }
-
       } while (choice != 4);
     }
   }

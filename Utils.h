@@ -26,9 +26,6 @@ bool isValidMotorbikePlate(const string &plate);
 // 3b. Kiểm tra biển số ôtô Việt Nam: 2 số + 1-2 chữ cái + 4-5 số (VD: 51F1234)
 bool isValidCarPlate(const string &plate);
 
-// 4. Nhập và kiểm tra một số nguyên hợp lệ (>= 0)
-int readInt();
-
 // 5. Nhập và kiểm tra lựa chọn menu
 int readMenuChoice(int lo, int hi);
 

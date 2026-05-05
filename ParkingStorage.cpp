@@ -265,7 +265,7 @@ bool ParkingStorage::addVehicle(string empID) {
   string plate;
   if (type != 1) {
     cout << "  Vui long nhap thong tin xe:\n";
-    plate = readPlate(true, type); // truyền type để validate đúng định dạng
+    plate = readPlate(true, type);
   }
 
   using Factory = function<Vehicle *(const string &, const string &)>;
