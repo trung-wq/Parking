@@ -113,7 +113,7 @@ int main() {
           }
           break;
         case 2:
-          if (lot.removeVehicle()) {
+          if (lot.removeVehicle(currentUser->getID())) {
             cout << "\nNhan Enter de tiep tuc...";
             waitEnter();
           }
@@ -172,7 +172,7 @@ int main() {
               }
               break;
             case 2:
-              if (lot.removeVehicle()) {
+              if (lot.removeVehicle(currentUser->getID())) {
                 cout << "\nNhan Enter de tiep tuc...";
                 waitEnter();
               }

@@ -87,9 +87,14 @@ static void printRecords(const vector<Record> &list) {
     cout << "\n  [!] Khong co du lieu trong thoi gian nay.\n";
     return;
   }
-  cout << "\n  +----+------------+----------+------------+------------+\n";
-  cout << "  | STT| Bien so    | Loai xe  | Ngay ra    | Tien (VND) |\n";
-  cout << "  +----+------------+----------+------------+------------+\n";
+  cout << "\n  "
+          "+----+------------+----------+------------+------------+------------"
+          "+\n";
+  cout << "  | STT| Bien so    | Loai xe  | Ngay ra    | Tien (VND) | Nhan "
+          "vien  |\n";
+  cout << "  "
+          "+----+------------+----------+------------+------------+------------"
+          "+\n";
   int idx = 1;
   for (auto &r : list) {
     string plate = r.plate.empty() ? "NONE" : r.plate;
@@ -97,9 +102,12 @@ static void printRecords(const vector<Record> &list) {
         (r.type == 1) ? "Xe dap" : (r.type == 2 ? "Xe may" : "O to");
     cout << "  | " << left << setw(3) << idx++ << "| " << left << setw(11)
          << plate << "| " << left << setw(9) << typeStr << "| " << left
-         << setw(11) << r.date << "| " << left << setw(11) << r.fee << "|\n";
+         << setw(11) << r.date << "| " << left << setw(11) << r.fee << "| "
+         << left << setw(11) << r.empID << "|\n";
   }
-  cout << "  +----+------------+----------+------------+------------+\n";
+  cout << "  "
+          "+----+------------+----------+------------+------------+------------"
+          "+\n";
 }
 
 // Menu sắp xếp chung
@@ -166,30 +174,32 @@ void RevenueManager::ShowHistory() {
     cout << "\n  " << icon << " " << title << " (" << list.size() << " luot)\n";
     cout << "  "
             "+----+------------+------------+------------+-------+------------+"
-            "-------+-----------+\n";
+            "-------+-----------+------------+\n";
     cout << "  | STT| Bien so    | Ma ve      | Ngay vao   | Gio   | Ngay ra   "
-            " | Gio   | Phi (VND) |\n";
+            " | Gio   | Phi (VND) | Nhan vien  |\n";
     cout << "  "
             "+----+------------+------------+------------+-------+------------+"
-            "-------+-----------+\n";
+            "-------+-----------+------------+\n";
     int idx = 1;
     for (Vehicle *v : list) {
-      string plate = v->getPlate().empty() ? "NONE" : v->getPlate();
+      string plate = v->getPlate().empty() ? "(khong co)" : v->getPlate();
       string id = v->getTicket().getId();
       string dateIn = v->getTicket().getDateIn();
       string timeIn = v->formatTime(v->getTicket().getTimeIn());
       string dateOut = v->getTicket().getDateOut();
       string timeOut = v->formatTime(v->getTicket().getTimeOut());
       int fee = v->calculateFee();
+      string eid = v->getTicket().getEmployeeID();
       cout << "  | " << left << setw(3) << idx++ << "| " << left << setw(11)
            << plate << "| " << left << setw(11) << id << "| " << left
            << setw(11) << dateIn << "| " << left << setw(6) << timeIn << "| "
            << left << setw(11) << dateOut << "| " << left << setw(6) << timeOut
-           << "| " << left << setw(10) << fee << "|\n";
+           << "| " << left << setw(10) << fee << "| " << left << setw(11) << eid
+           << "|\n";
     }
     cout << "  "
             "+----+------------+------------+------------+-------+------------+"
-            "-------+-----------+\n";
+            "-------+-----------+------------+\n";
   };
 
   cout << "\n=================================================================="
@@ -226,8 +236,8 @@ bool RevenueManager::revenueByDate() {
     Vehicle *v = temp.top();
     if (v->getTicket().getDateOut() == inputDate) {
       int fee = v->calculateFee();
-      list.push_back(
-          {v->getPlate(), v->getTicket().getDateOut(), fee, v->getType()});
+      list.push_back({v->getPlate(), v->getTicket().getDateOut(), fee,
+                      v->getType(), v->getTicket().getEmployeeID()});
       total += fee;
     }
     temp.pop();
@@ -278,8 +288,8 @@ bool RevenueManager::revenueByDay() {
     getDateParts(v->getTicket().getTimeOut(), dd, mm, yy);
     if (dd == d && mm == m && yy == y) {
       int fee = v->calculateFee();
-      list.push_back(
-          {v->getPlate(), v->getTicket().getDateOut(), fee, v->getType()});
+      list.push_back({v->getPlate(), v->getTicket().getDateOut(), fee,
+                      v->getType(), v->getTicket().getEmployeeID()});
       total += fee;
     }
     temp.pop();
@@ -330,8 +340,8 @@ bool RevenueManager::revenueByMonth() {
     getDateParts(v->getTicket().getTimeOut(), dd, mm, yy);
     if (mm == m && yy == y) {
       int fee = v->calculateFee();
-      list.push_back(
-          {v->getPlate(), v->getTicket().getDateOut(), fee, v->getType()});
+      list.push_back({v->getPlate(), v->getTicket().getDateOut(), fee,
+                      v->getType(), v->getTicket().getEmployeeID()});
       total += fee;
     }
     temp.pop();
@@ -382,8 +392,8 @@ bool RevenueManager::revenueByYear() {
     getDateParts(v->getTicket().getTimeOut(), dd, mm, yy);
     if (yy == y) {
       int fee = v->calculateFee();
-      list.push_back(
-          {v->getPlate(), v->getTicket().getDateOut(), fee, v->getType()});
+      list.push_back({v->getPlate(), v->getTicket().getDateOut(), fee,
+                      v->getType(), v->getTicket().getEmployeeID()});
       total += fee;
     }
     temp.pop();

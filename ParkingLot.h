@@ -16,7 +16,7 @@ public:
 
   // --- Quản lý xe ---
   bool addVehicle(string empID) { return storage.addVehicle(empID); }
-  bool removeVehicle() { return storage.removeVehicle(); }
+  bool removeVehicle(string empID) { return storage.removeVehicle(empID); }
 
   // --- Hiển thị & tìm kiếm ---
   void display() { checker.display(); }

@@ -297,7 +297,7 @@ bool ParkingStorage::addVehicle(string empID) {
 // ============================================================
 //  Quản lý xe: xóa xe (xe rời bãi)
 // ============================================================
-bool ParkingStorage::removeVehicle() {
+bool ParkingStorage::removeVehicle(string empID) {
   while (true) {
     if (parkingQueue.empty()) {
       cout << "Bai xe rong\n";
@@ -351,6 +351,7 @@ bool ParkingStorage::removeVehicle() {
 
       if (!found && isMatch) {
         v->getTicket().setTimeOut();
+        v->getTicket().setEmployeeID(empID);
         int fee = v->calculateFee();
         cout << "\n========================================";
         cout << "\n         XE ROI BAI THANH CONG        ";

@@ -43,5 +43,5 @@ public:
 
   // --- Quản lý xe ---
   bool addVehicle(string empID);
-  bool removeVehicle();
+  bool removeVehicle(string empID);
 };
