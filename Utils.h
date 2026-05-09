@@ -29,4 +29,25 @@ bool isValidCarPlate(const string &plate);
 // 5. Nhập và kiểm tra lựa chọn menu
 int readMenuChoice(int lo, int hi);
 
+// 6. Nhập số nguyên an toàn
+int readInteger(const string &prompt, int minVal = 1);
+
+// 7. Kiểm tra số điện thoại (10 số)
+bool isValidPhone(const string &phone);
+
+// 8. Kiểm tra tên (không rỗng, tối đa 50 ký tự)
+bool isValidName(const string &name);
+
+// 9. Định dạng thời gian trôi qua (giây -> X giờ Y phút)
+string formatDuration(time_t seconds);
+
+// 10. Kiểm tra định dạng ngày (DD/MM/YYYY)
+bool isValidDate(const string &date);
+
+// 11. Các hàm xử lý và kiểm tra ngày tháng năm
+void getDateParts(time_t t, int &d, int &m, int &y);
+bool isValidDate(int d, int m, int y);
+bool isValidMonth(int m, int y);
+bool isValidYear(int y);
+
 } // namespace Utils

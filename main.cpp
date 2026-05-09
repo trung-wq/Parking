@@ -9,53 +9,60 @@ void waitEnter() { cin.get(); }
 
 void menuEmployee() {
   cout << "\n=== QUAN LY NHAN VIEN ===\n";
-  cout << "1 Danh sach nhan vien\n";
-  cout << "2 Them nhan vien\n";
-  cout << "3 Xoa nhan vien\n";
-  cout << "4 Cap nhat nhan vien\n";
-  cout << "0 Quay lai menu chinh\n";
+  cout << "1. Danh sach nhan vien\n";
+  cout << "2. Them nhan vien\n";
+  cout << "3. Xoa nhan vien\n";
+  cout << "4. Cap nhat nhan vien\n";
+  cout << "0. Quay lai menu chinh\n";
   cout << "Chon: ";
 }
 
 void menuRevenue() {
   cout << "\n=== QUAN LY DOANH THU ===\n";
-  cout << "1 Tong doanh thu\n";
-  cout << "2 Doanh thu theo ngay\n";
-  cout << "3 Doanh thu theo thang\n";
-  cout << "4 Doanh thu theo nam\n";
-  cout << "0 Quay lai menu chinh\n";
+  cout << "1. Tong doanh thu\n";
+  cout << "2. Doanh thu theo ngay\n";
+  cout << "3. Doanh thu theo thang\n";
+  cout << "4. Doanh thu theo nam\n";
+  cout << "0. Quay lai menu chinh\n";
   cout << "Chon: ";
 }
 
 void menuParking() {
   cout << "\n=== QUAN LY BAI XE ===\n";
-  cout << "1 Them xe moi\n";
-  cout << "2 Xe ra khoi bai\n";
-  cout << "3 Danh sach xe hien tai\n";
-  cout << "4 Tim kiem thong tin xe trong bai\n";
-  cout << "5 Danh sach cac xe da ra khoi bai\n";
-  cout << "6 Thong ke vi tri trong\n";
-  cout << "0 Quay lai menu chinh\n";
+  cout << "1. Them xe moi\n";
+  cout << "2. Xe ra khoi bai\n";
+  cout << "3. Danh sach xe trong bai\n";
+  cout << "4. Danh sach cac xe da ra khoi bai\n";
+  cout << "--- Ve thang ---\n";
+  cout << "5. Dang ky ve thang moi\n";
+  cout << "6. Tra cuu & Quan ly ve thang\n";
+  cout << "7. Danh sach & Thong ke ve thang\n";
+  cout << "--- Cau hinh ---\n";
+  cout << "8. Xem cau hinh hien tai\n";
+  cout << "9. Cap nhat cau hinh (Gia & Cho trong)\n";
+  cout << "0. Quay lai menu chinh\n";
   cout << "Chon: ";
 }
 
 void menuAdmin() {
   cout << "\n===== ADMIN =====\n";
-  cout << "1 Quan ly bai xe\n";
-  cout << "2 Quan ly doanh thu\n";
-  cout << "3 Quan ly nhan vien\n";
-  cout << "4 Dang xuat\n";
+  cout << "1. Quan ly bai xe\n";
+  cout << "2. Quan ly doanh thu\n";
+  cout << "3. Quan ly nhan vien\n";
+  cout << "4. Dang xuat\n";
   cout << "Chon: ";
 }
 
 void menuNV() {
   cout << "\n===== QUAN LY BAI GIU XE =====\n";
-  cout << "1 Them xe moi\n";
-  cout << "2 Xe ra khoi bai\n";
-  cout << "3 Danh sach xe hien tai\n";
-  cout << "4 Tim kiem thong tin xe trong bai\n";
-  cout << "5 Thong ke vi tri trong\n";
-  cout << "0 Dang xuat\n";
+  cout << "1. Them xe moi\n";
+  cout << "2. Xe ra khoi bai\n";
+  cout << "3. Danh sach xe trong bai\n";
+  cout << "--- Ve thang ---\n";
+  cout << "4. Dang ky ve thang moi\n";
+  cout << "5. Tra cuu & Quan ly ve thang\n";
+  cout << "6. Danh sach & Thong ke ve thang\n";
+  cout << "0. Dang xuat\n";
   cout << "Chon: ";
 }
 
@@ -101,9 +108,8 @@ int main() {
       int choice;
       do {
         system("clear");
-        // lot.showListParking();
         menuNV();
-        choice = Utils::readMenuChoice(0, 5);
+        choice = Utils::readMenuChoice(0, 6);
 
         switch (choice) {
         case 1:
@@ -129,11 +135,6 @@ int main() {
             waitEnter();
           }
           break;
-        case 5:
-          lot.showAvailableSlots();
-          cout << "\nNhan Enter de tiep tuc...";
-          waitEnter();
-          break;
         case 0:
           cout << "Dang xuat thanh cong!\n";
           cout << "Nhan Enter de tiep tuc...";
@@ -147,7 +148,6 @@ int main() {
       int choice;
       do {
         system("clear");
-        // lot.showListParking();
         menuAdmin();
         choice = Utils::readMenuChoice(1, 4);
 
@@ -163,7 +163,7 @@ int main() {
           do {
             system("clear");
             menuParking();
-            c = Utils::readMenuChoice(0, 6);
+            c = Utils::readMenuChoice(0, 9);
             switch (c) {
             case 1:
               if (lot.addVehicle(currentUser->getID())) {
@@ -179,22 +179,41 @@ int main() {
               break;
             case 3:
               lot.display();
+              cout << "\n  Tim kiem xe trong bai? (1=Co, 0=Khong): ";
+              {
+                int sc = Utils::readMenuChoice(0, 1);
+                if (sc == 1)
+                  lot.search();
+              }
               cout << "\nNhan Enter de tiep tuc...";
               waitEnter();
               break;
             case 4:
-              if (lot.search()) {
-                cout << "\nNhan Enter de tiep tuc...";
-                waitEnter();
-              }
-              break;
-            case 5:
               lot.ShowHistory();
               cout << "\nNhan Enter de tiep tuc...";
               waitEnter();
               break;
+            case 5:
+              lot.addMonthlyTicket(currentUser->getID());
+              cout << "\nNhan Enter de tiep tuc...";
+              waitEnter();
+              break;
             case 6:
-              lot.showAvailableSlots();
+              lot.manageMonthlyTicket(currentUser->getID());
+              break;
+            case 7:
+              lot.showMonthlyStatistics();
+              lot.showMonthlyTickets();
+              cout << "\nNhan Enter de tiep tuc...";
+              waitEnter();
+              break;
+            case 8:
+              lot.showConfigs();
+              cout << "\nNhan Enter de tiep tuc...";
+              waitEnter();
+              break;
+            case 9:
+              lot.updateConfig();
               cout << "\nNhan Enter de tiep tuc...";
               waitEnter();
               break;

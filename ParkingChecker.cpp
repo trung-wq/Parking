@@ -9,12 +9,16 @@ void ParkingChecker::showAvailableSlots() {
   int countBicycle, countMotorbike, countCar;
   storage.countVehicles(countBicycle, countMotorbike, countCar);
 
-  const int maxBicycle = 20, maxMotorbike = 40, maxCar = 30, maxTotal = 90;
-  int remBicycle = maxBicycle - countBicycle;
-  int remMotorbike = maxMotorbike - countMotorbike;
-  int remCar = maxCar - countCar;
+  VehicleConfig cfgB = storage.getVehicleConfig(1);
+  VehicleConfig cfgM = storage.getVehicleConfig(2);
+  VehicleConfig cfgC = storage.getVehicleConfig(3);
+
+  int remBicycle = cfgB.maxCapacity - countBicycle;
+  int remMotorbike = cfgM.maxCapacity - countMotorbike;
+  int remCar = cfgC.maxCapacity - countCar;
   int remTotal = remBicycle + remMotorbike + remCar;
   int usedTotal = countBicycle + countMotorbike + countCar;
+  int maxTotal = cfgB.maxCapacity + cfgM.maxCapacity + cfgC.maxCapacity;
 
   cout << "\n========================================\n";
   cout << "        TINH TRANG BAI GIU XE\n";
@@ -22,22 +26,34 @@ void ParkingChecker::showAvailableSlots() {
   cout << "  Loai xe   | Da dung | Con trong | Tong\n";
   cout << "----------------------------------------\n";
   cout << "  Xe dap    |   " << countBicycle << "    |    " << remBicycle
-       << "      |  " << maxBicycle << "\n";
+       << "      |  " << cfgB.maxCapacity << "\n";
   cout << "  Xe may    |   " << countMotorbike << "     |    " << remMotorbike
-       << "     |  " << maxMotorbike << "\n";
+       << "     |  " << cfgM.maxCapacity << "\n";
   cout << "  O to      |   " << countCar << "     |    " << remCar << "     |  "
-       << maxCar << "\n";
+       << cfgC.maxCapacity << "\n";
   cout << "----------------------------------------\n";
   cout << "  Tong cong |   " << usedTotal << "    |    " << remTotal
        << "     |  " << maxTotal << "\n";
   cout << "========================================\n";
+
+  // Hiển thị chi tiết từng khu vực
+  cout << "\n  CHI TIET CAC KHU VUC:\n";
+  for (const auto &zone : storage.getZones()) {
+    int avail = 0;
+    for (const auto &slot : zone.slots) {
+      if (slot.status == SlotStatus::Available)
+        avail++;
+    }
+    cout << "  - " << left << setw(20) << zone.name << ": " << avail
+         << " cho trong\n";
+  }
 }
 
 // ============================================================
 //  Danh sách xe đang trong bãi
 // ============================================================
 void ParkingChecker::showListParking() {
-  storage.loadFromFile();
+  storage.loadFromFile(monthlyManager);
   queue<Vehicle *> &pq = storage.getQueue();
   if (pq.empty()) {
     cout << "Hien tai khong co xe nao trong bai!\n";
@@ -63,9 +79,25 @@ void ParkingChecker::showListParking() {
 //  Bảng hiển thị đầy đủ, phân nhóm theo loại xe
 // ============================================================
 void ParkingChecker::display() {
+  int countBicycle, countMotorbike, countCar;
+  storage.countVehicles(countBicycle, countMotorbike, countCar);
+
+  VehicleConfig cfgB = storage.getVehicleConfig(1);
+  VehicleConfig cfgM = storage.getVehicleConfig(2);
+  VehicleConfig cfgC = storage.getVehicleConfig(3);
+
+  int remBicycle = cfgB.maxCapacity - countBicycle;
+  int remMotorbike = cfgM.maxCapacity - countMotorbike;
+  int remCar = cfgC.maxCapacity - countCar;
+  int remTotal = remBicycle + remMotorbike + remCar;
+  int usedTotal = countBicycle + countMotorbike + countCar;
+  int maxTotal = cfgB.maxCapacity + cfgM.maxCapacity + cfgC.maxCapacity;
+
+  /* (Phan thong ke vi tri da duoc luoc bo theo yeu cau) */
+
   queue<Vehicle *> &pq = storage.getQueue();
   if (pq.empty()) {
-    cout << "\n  Hien tai khong co xe nao trong bai!\n";
+    cout << "\n  [!] Hien tai khong co xe nao trong bai!\n";
     return;
   }
 
@@ -84,34 +116,46 @@ void ParkingChecker::display() {
 
   auto printGroup = [](const string &title, const string &icon,
                        vector<Vehicle *> &list, int maxSlot) {
+    if (list.empty())
+      return;
     cout << "\n  " << icon << " " << title << " (" << list.size() << "/"
-         << maxSlot << " cho)\n";
-    cout << "  +----+------------+------------+------------+-------+\n";
-    cout << "  | STT| Bien so    | Ma ve      | Ngay vao   | Gio   |\n";
-    cout << "  +----+------------+------------+------------+-------+\n";
+         << maxSlot << " cho dang dung)\n";
+    cout << "  "
+            "+----+------------+------------+------------+-------+----------+--"
+            "------+----------+\n";
+    cout << "  | STT| Bien so    | Ma ve      | Ngay vao   | Gio   | Loai     "
+            "| Vi tri | T.Gian   |\n";
+    cout << "  "
+            "+----+------------+------------+------------+-------+----------+--"
+            "------+----------+\n";
     int idx = 1;
+    time_t now = time(0);
     for (Vehicle *v : list) {
       string plate = v->getPlate().empty() ? "(khong co)" : v->getPlate();
       string id = v->getTicket().getId();
       string date = v->getTicket().getDateIn();
-      string time = v->formatTime(v->getTicket().getTimeIn());
+      string timeStr = v->formatTime(v->getTicket().getTimeIn());
+      string type = v->getTicket().getIsMonthly() ? "Ve thang" : "Ve luot";
+      string slot = v->getTicket().getSlotCode();
+      string duration = Utils::formatDuration(now - v->getTicket().getTimeIn());
+
       cout << "  | " << left << setw(3) << idx++ << "| " << left << setw(11)
            << plate << "| " << left << setw(11) << id << "| " << left
-           << setw(11) << date << "| " << left << setw(6) << time << "|\n";
+           << setw(11) << date << "| " << left << setw(6) << timeStr << "| "
+           << left << setw(9) << type << "| " << left << setw(7) << slot
+           << "| " << left << setw(9) << duration << "|\n";
     }
-    cout << "  +----+------------+------------+------------+-------+\n";
+    cout << "  "
+            "+----+------------+------------+------------+-------+----------+--"
+            "------+----------+\n";
   };
 
-  cout << "\n========================================\n";
-  cout << "       DANH SACH XE DANG TRONG BAI\n";
-  cout << "========================================\n";
-  printGroup("XE DAP", "[DAP]", bicycles, 20);
-  printGroup("XE MAY", "[MAY]", motorbikes, 40);
-  printGroup("O TO", "[OTO]", cars, 30);
-
-  int total = bicycles.size() + motorbikes.size() + cars.size();
-  cout << "\n  Tong so xe dang gui: " << total << "/90\n";
-  cout << "========================================\n";
+  cout << "\n           >>> CHI TIET DANH SACH XE DANG GUI <<<\n";
+  printGroup("XE DAP", "[DAP]", bicycles, cfgB.maxCapacity);
+  printGroup("XE MAY", "[MAY]", motorbikes, cfgM.maxCapacity);
+  printGroup("O TO", "[OTO]", cars, cfgC.maxCapacity);
+  cout << "\n=================================================================="
+          "======\n";
 }
 
 // ============================================================
@@ -128,11 +172,12 @@ bool ParkingChecker::search() {
     cout << "\n---------- TIM KIEM XE ----------\n";
     cout << "  1. Theo ma ve\n";
     cout << "  2. Theo bien so\n";
-    cout << "  3. Quay lai\n";
+    cout << "  3. Theo ngay vao (DD/MM/YYYY)\n";
+    cout << "  0. Quay lai\n";
     cout << "-------------------------------\n";
     cout << "  Chon: ";
-    int opt = Utils::readMenuChoice(1, 3);
-    if (opt == 3)
+    int opt = Utils::readMenuChoice(0, 3);
+    if (opt == 0)
       return false;
 
     string inputStr;
@@ -145,14 +190,18 @@ bool ParkingChecker::search() {
           cout << "  [!] Khong duoc de trong!\n";
           continue;
         }
-        if (Utils::hasInvalidChar(inputStr)) {
-          cout << "  [!] Chi chap nhan chu cai va so!\n";
-          continue;
-        }
         break;
       }
-    } else {
+    } else if (opt == 2) {
       inputStr = storage.readPlate(false);
+    } else {
+      while (true) {
+        cout << "  Nhap ngay (DD/MM/YYYY): ";
+        getline(cin, inputStr);
+        if (Utils::isValidDate(inputStr))
+          break;
+        cout << "  [!] Ngay khong hop le (Dinh dang dung: DD/MM/YYYY)!\n";
+      }
     }
 
     queue<Vehicle *> temp = pq;
@@ -164,20 +213,52 @@ bool ParkingChecker::search() {
         isMatch = true;
       else if (opt == 2 && v->getPlate() == inputStr && !v->getPlate().empty())
         isMatch = true;
+      else if (opt == 3 && v->getTicket().getDateIn() == inputStr)
+        isMatch = true;
 
       if (isMatch) {
-        cout << "\n========================================\n";
-        cout << "         THONG TIN XE TIM THAY\n";
-        cout << "========================================\n";
-        v->display();
-        cout << "========================================\n";
+        if (!found) {
+          cout << "\n========================================\n";
+          cout << "         THONG TIN XE TIM THAY\n";
+          cout << "========================================\n";
+        } else {
+          cout << "----------------------------------------\n";
+        }
+        string typeStr =
+            (v->getType() == 1 ? "Xe dap"
+                               : (v->getType() == 2 ? "Xe may" : "O to"));
+        string ticketType =
+            v->getTicket().getIsMonthly() ? "Ve thang" : "Ve luot";
+        string plate = v->getPlate().empty() ? "(khong co)" : v->getPlate();
+        string duration = storage.getDurationString(v->getTicket().getTimeIn(),
+                                                    time(nullptr));
+
+        cout << "  - Bien so    : " << plate << endl;
+        cout << "  - Ma ve      : " << v->getTicket().getId() << endl;
+        cout << "  - Loai xe    : " << typeStr << endl;
+        cout << "  - Loai ve    : " << ticketType << endl;
+        cout << "  - Ngay vao   : " << v->getTicket().getDateIn() << endl;
+        cout << "  - Gio vao    : " << v->formatTime(v->getTicket().getTimeIn())
+             << endl;
+        cout << "  - Vi tri do  : " << v->getTicket().getSlotCode() << endl;
+        cout << "  - Thoi gian da gui: " << duration << endl;
         found = true;
-        return true;
+        
+        // Neu tim theo ma ve hoac bien so thi return ngay (vi duy nhat)
+        // Con tim theo ngay thi tiep tuc de tim tat ca cac xe trong ngay do
+        if (opt == 1 || opt == 2) {
+          cout << "========================================\n";
+          return true;
+        }
       }
       temp.pop();
     }
-    if (!found) {
-      cout << "\n  [!] KHONG TIM THAY XE: " << inputStr << "\n";
+    
+    if (found) {
+      cout << "========================================\n";
+      return true;
+    } else {
+      cout << "\n  [!] KHONG TIM THAY XE PHU HOP: " << inputStr << "\n";
       cout << "\n  1. Tiep tuc tim xe khac\n";
       cout << "  2. Quay lai menu\n";
       cout << "  Chon: ";

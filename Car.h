@@ -5,36 +5,16 @@ class Car : public Vehicle {
 
 public:
   Car(string p, string tID) : Vehicle(p, tID) {}
-  int calculateFee() {
-    int fee = 0;
-    time_t temp = ticket.getTimeIn();
-    time_t out = ticket.getTimeOut();
-    while (temp < out) {
-      tm *info = localtime(&temp);
-      int h = info->tm_hour;
-      if (h >= 6 && h < 18) {
-        fee += 10000;
-        info->tm_hour = 18;
-        info->tm_min = 0;
-        info->tm_sec = 0;
-        temp = mktime(info);
-      } else {
-        fee += 15000;
-        if (h >= 18) {
-          info->tm_mday += 1;
-        }
-        info->tm_hour = 6;
-        info->tm_min = 0;
-        info->tm_sec = 0;
-        temp = mktime(info);
-      }
+  int calculateFee(int dayPrice, int nightPrice) {
+    time_t start = ticket.getTimeIn();
+    if (ticket.getIsMonthly()) {
+      if (ticket.getTimeOut() <= ticket.getExpirationDate())
+        return 0;
+      start = ticket.getExpirationDate();
     }
-    return fee;
+    return Vehicle::calculateShiftFee(start, ticket.getTimeOut(), dayPrice, nightPrice);
   }
 
-  void display() {
-    cout << "[O to]\n";
-    Vehicle::display();
-  }
+  void display() { Vehicle::display(); }
   int getType() { return 3; }
 };

@@ -1,5 +1,4 @@
 #pragma once
-#define _CRT_SECURE_NO_WARNINGS
 #include <ctime>
 #include <iostream>
 #include <string>
@@ -15,6 +14,9 @@ private:
   string dateIn;
   string dateOut;
   string employeeID;
+  bool isMonthly;
+  time_t expirationDate;
+  string slotCode;
 
 public:
   Ticket(string i) {
@@ -22,13 +24,24 @@ public:
     time(&timeIn);
     dateIn = setDate(timeIn);
     employeeID = "NONE";
+    isMonthly = false;
+    expirationDate = 0;
+    slotCode = "N/A";
   }
 
   Ticket() {
     id = "BICYCLE";
     time(&timeIn);
     employeeID = "NONE";
+    isMonthly = false;
+    expirationDate = 0;
+    slotCode = "N/A";
   }
+  void setId(string i) { id = i; }
+  void setExpirationDate(time_t e) { expirationDate = e; }
+  time_t getExpirationDate() { return expirationDate; }
+  void setIsMonthly(bool m) { isMonthly = m; }
+  bool getIsMonthly() { return isMonthly; }
   string setDate(time_t d) {
     tm info;
     localtime_r(&d, &info);
@@ -61,10 +74,14 @@ public:
   string getDateOut() { return dateOut; }
   string getId() { return id; }
   string getEmployeeID() { return employeeID; }
+  void setSlotCode(string sc) { slotCode = sc; }
+  string getSlotCode() { return slotCode; }
   void display() {
     cout << "Ma ve    : " << id << endl;
+    cout << "Loai ve  : " << (isMonthly ? "VE THANG" : "VE LUOT") << endl;
     cout << "Ngay vao : " << dateIn << endl;
     cout << "Gio vao  : " << formatTime(timeIn) << endl;
+    cout << "Vi tri   : " << slotCode << endl;
     cout << "Nhan vien: " << employeeID << endl;
   }
 };

@@ -6,9 +6,10 @@
 class ParkingChecker {
 private:
   ParkingStorage &storage;
+  MonthlyTicketManager &monthlyManager;
 
 public:
-  explicit ParkingChecker(ParkingStorage &s) : storage(s) {}
+  explicit ParkingChecker(ParkingStorage &s, MonthlyTicketManager &m) : storage(s), monthlyManager(m) {}
 
   void showAvailableSlots(); // Tình trạng chỗ trống
   void showListParking();    // Danh sách xe đang trong bãi

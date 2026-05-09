@@ -1,86 +1,9 @@
 #include "RevenueManager.h"
+#include "ParkingStorage.h"
+#include "Utils.h"
+#include <fstream>
 #include <iomanip>
 using namespace std;
-
-static void getDateParts(time_t t, int &d, int &m, int &y) {
-  tm info;
-  localtime_r(&t, &info);
-  d = info.tm_mday;
-  m = info.tm_mon + 1;
-  y = info.tm_year + 1900;
-}
-
-static bool isValidDate(int d, int m, int y) {
-  if (y < 1900 || y > 2100)
-    return false;
-  if (m < 1 || m > 12)
-    return false;
-  if (d < 1)
-    return false;
-  int daysInMonth[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-  if ((y % 4 == 0 && y % 100 != 0) || (y % 400 == 0))
-    daysInMonth[1] = 29;
-  if (d > daysInMonth[m - 1])
-    return false;
-
-  int cur_d, cur_m, cur_y;
-  getDateParts(time(nullptr), cur_d, cur_m, cur_y);
-  if (y > cur_y)
-    return false;
-  if (y == cur_y && m > cur_m)
-    return false;
-  if (y == cur_y && m == cur_m && d > cur_d)
-    return false;
-
-  return true;
-}
-
-static bool isValidMonth(int m, int y) {
-  if (y < 1900 || y > 2100 || m < 1 || m > 12)
-    return false;
-  int cur_d, cur_m, cur_y;
-  getDateParts(time(nullptr), cur_d, cur_m, cur_y);
-  if (y > cur_y)
-    return false;
-  if (y == cur_y && m > cur_m)
-    return false;
-  return true;
-}
-
-static bool isValidYear(int y) {
-  if (y < 1900 || y > 2100)
-    return false;
-  int cur_d, cur_m, cur_y;
-  getDateParts(time(nullptr), cur_d, cur_m, cur_y);
-  return y <= cur_y;
-}
-
-static void printSummary(const vector<Record> &list) {
-  int dCount = 0, mCount = 0, cCount = 0;
-  int dFee = 0, mFee = 0, cFee = 0;
-  for (const auto &r : list) {
-    if (r.type == 1) {
-      dCount++;
-      dFee += r.fee;
-    } else if (r.type == 2) {
-      mCount++;
-      mFee += r.fee;
-    } else if (r.type == 3) {
-      cCount++;
-      cFee += r.fee;
-    }
-  }
-  cout << "\n  --- TOM TAT THEO LOAI XE ---\n";
-  cout << "  Xe dap : " << left << setw(3) << dCount << " luot | " << right
-       << setw(10) << dFee << " VND\n";
-  cout << "  Xe may : " << left << setw(3) << mCount << " luot | " << right
-       << setw(10) << mFee << " VND\n";
-  cout << "  O to   : " << left << setw(3) << cCount << " luot | " << right
-       << setw(10) << cFee << " VND\n";
-  cout << "  ----------------------------\n";
-  cout << "  TONG   : " << left << setw(3) << (dCount + mCount + cCount)
-       << " luot | " << right << setw(10) << (dFee + mFee + cFee) << " VND\n";
-}
 
 static void printRecords(const vector<Record> &list) {
   if (list.empty()) {
@@ -110,14 +33,43 @@ static void printRecords(const vector<Record> &list) {
           "+\n";
 }
 
+// ============================================================
+//  Đọc doanh thu vé tháng từ monthly_revenue.txt
+// ============================================================
+static vector<Record> readMonthlyRevenue(int filterDay = -1,
+                                         int filterMonth = -1,
+                                         int filterYear = -1) {
+  vector<Record> result;
+  ifstream in("monthly_revenue.txt");
+  if (!in)
+    return result;
+  int type;
+  string plate, date, empID;
+  int price;
+  while (in >> type >> plate >> date >> price >> empID) {
+    // date dạng DD/MM/YYYY
+    int dd = 0, mm = 0, yy = 0;
+    sscanf(date.c_str(), "%d/%d/%d", &dd, &mm, &yy);
+    if (filterDay != -1 && dd != filterDay)
+      continue;
+    if (filterMonth != -1 && mm != filterMonth)
+      continue;
+    if (filterYear != -1 && yy != filterYear)
+      continue;
+    result.push_back({plate == "NONE" ? "" : plate, date, price, type, empID});
+  }
+  in.close();
+  return result;
+}
+
 // Menu sắp xếp chung
 static void sortMenu(vector<Record> &list) {
   int opt;
   do {
     cout << "\nSap xep:\n";
-    cout << "1 Tang dan theo tien\n";
-    cout << "2 Giam dan theo tien\n";
-    cout << "3 Quay lai menu thong ke\n";
+    cout << "1. Tang dan theo tien\n";
+    cout << "2. Giam dan theo tien\n";
+    cout << "3. Quay lai menu thong ke\n";
     cout << "Chon: ";
     while (!(cin >> opt) || opt < 1 || opt > 3) {
       cin.clear();
@@ -139,9 +91,21 @@ static void sortMenu(vector<Record> &list) {
 //  Tổng doanh thu
 // ============================================================
 void RevenueManager::showRevenue() {
-  cout << "\n====== KET QUA ======\n";
-  cout << "Tong doanh thu: " << storage.getRevenue() << " VND\n";
-  cout << "=====================\n";
+  int dailyRevenue = storage.getRevenue();
+  int monthlyTotal = 0;
+  vector<Record> monthlyList = readMonthlyRevenue(-1, -1);
+  for (const auto &r : monthlyList)
+    monthlyTotal += r.fee;
+
+  cout << "\n====== TONG DOANH THU HIEU TAI ======\n";
+  cout << "  - Doanh thu ve luot  : " << right << setw(10) << dailyRevenue
+       << " VND\n";
+  cout << "  - Doanh thu ve thang : " << right << setw(10) << monthlyTotal
+       << " VND\n";
+  cout << "  -------------------------------------\n";
+  cout << "  TONG DOANH THU       : " << right << setw(10)
+       << (dailyRevenue + monthlyTotal) << " VND\n";
+  cout << "=====================================\n";
 }
 
 // ============================================================
@@ -167,19 +131,14 @@ void RevenueManager::ShowHistory() {
     temp.pop();
   }
 
-  auto printGroup = [](const string &title, const string &icon,
-                       vector<Vehicle *> &list) {
+  auto printGroup = [this](const string &title, const string &icon,
+                           vector<Vehicle *> &list) {
     if (list.empty())
       return;
     cout << "\n  " << icon << " " << title << " (" << list.size() << " luot)\n";
-    cout << "  "
-            "+----+------------+------------+------------+-------+------------+"
-            "-------+-----------+------------+\n";
-    cout << "  | STT| Bien so    | Ma ve      | Ngay vao   | Gio   | Ngay ra   "
-            " | Gio   | Phi (VND) | Nhan vien  |\n";
-    cout << "  "
-            "+----+------------+------------+------------+-------+------------+"
-            "-------+-----------+------------+\n";
+    cout << "  +----+------------+------------+------------+-------+------------+-------+---------+-----------+------------+\n";
+    cout << "  | STT| Bien so    | Ma ve      | Ngay vao   | Gio   | Ngay ra    | Gio   | T.Gian  | Phi (VND) | Nhan vien  |\n";
+    cout << "  +----+------------+------------+------------+-------+------------+-------+---------+-----------+------------+\n";
     int idx = 1;
     for (Vehicle *v : list) {
       string plate = v->getPlate().empty() ? "(khong co)" : v->getPlate();
@@ -188,18 +147,18 @@ void RevenueManager::ShowHistory() {
       string timeIn = v->formatTime(v->getTicket().getTimeIn());
       string dateOut = v->getTicket().getDateOut();
       string timeOut = v->formatTime(v->getTicket().getTimeOut());
-      int fee = v->calculateFee();
+      string duration = Utils::formatDuration(v->getTicket().getTimeOut() - v->getTicket().getTimeIn());
+      VehicleConfig cfgH = storage.getVehicleConfig(v->getType());
+      int fee = v->calculateFee(cfgH.dayPrice, cfgH.nightPrice);
       string eid = v->getTicket().getEmployeeID();
       cout << "  | " << left << setw(3) << idx++ << "| " << left << setw(11)
            << plate << "| " << left << setw(11) << id << "| " << left
            << setw(11) << dateIn << "| " << left << setw(6) << timeIn << "| "
            << left << setw(11) << dateOut << "| " << left << setw(6) << timeOut
-           << "| " << left << setw(10) << fee << "| " << left << setw(11) << eid
+           << "| " << left << setw(8) << duration << "| " << left << setw(10) << fee << "| " << left << setw(11) << eid
            << "|\n";
     }
-    cout << "  "
-            "+----+------------+------------+------------+-------+------------+"
-            "-------+-----------+------------+\n";
+    cout << "  +----+------------+------------+------------+-------+------------+-------+---------+-----------+------------+\n";
   };
 
   cout << "\n=================================================================="
@@ -218,65 +177,20 @@ void RevenueManager::ShowHistory() {
 }
 
 // ============================================================
-//  Doanh thu theo chuỗi ngày nhập tay (dd/mm/yyyy)
-// ============================================================
-bool RevenueManager::revenueByDate() {
-  stack<Vehicle *> &hist = storage.getHistory();
-  if (hist.empty()) {
-    return false;
-  }
-  string inputDate;
-  cout << "Nhap ngay (dd/mm/yyyy): ";
-  cin >> inputDate;
-
-  vector<Record> list;
-  stack<Vehicle *> temp = hist;
-  int total = 0;
-  while (!temp.empty()) {
-    Vehicle *v = temp.top();
-    if (v->getTicket().getDateOut() == inputDate) {
-      int fee = v->calculateFee();
-      list.push_back({v->getPlate(), v->getTicket().getDateOut(), fee,
-                      v->getType(), v->getTicket().getEmployeeID()});
-      total += fee;
-    }
-    temp.pop();
-  }
-
-  if (!list.empty()) {
-    cout << "\n========================================\n";
-    cout << "   DOANH THU NGAY: " << inputDate << endl;
-    cout << "========================================\n";
-    printSummary(list);
-    printRecords(list);
-    sortMenu(list);
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
-    return true;
-  }
-  cout << "\n  [!] Khong tim thay du lieu doanh thu trong thoi gian nay!\n";
-  cin.ignore(numeric_limits<streamsize>::max(), '\n');
-  return true;
-}
-
-// ============================================================
-//  Doanh thu theo ngày (nhập d m y) + sắp xếp
+//  Doanh thu theo ngày (nhập DD/MM/YYYY) + sắp xếp
 // ============================================================
 bool RevenueManager::revenueByDay() {
+  string inputStr;
   int d, m, y;
   while (true) {
-    cout << "Nhap ngay thang nam (dd mm yyyy): ";
-    cin >> d >> m >> y;
-    if (cin.fail()) {
-      cin.clear();
-      cin.ignore(1000, '\n');
-      cout << "Nhap sai! Vui long nhap so.\n";
-      continue;
+    cout << "Nhap ngay thang nam (DD/MM/YYYY): ";
+    cin >> inputStr;
+    if (Utils::isValidDate(inputStr)) {
+      sscanf(inputStr.c_str(), "%d/%d/%d", &d, &m, &y);
+      break;
     }
-    if (!isValidDate(d, m, y)) {
-      cout << "Ngay thang khong hop le hoac lon hon hien tai!\n";
-      continue;
-    }
-    break;
+    cout << "Ngay thang khong hop le (Dinh dang: DD/MM/YYYY) hoac lon hon hien "
+            "tai!\n";
   }
 
   stack<Vehicle *> temp = storage.getHistory();
@@ -285,9 +199,10 @@ bool RevenueManager::revenueByDay() {
   while (!temp.empty()) {
     Vehicle *v = temp.top();
     int dd, mm, yy;
-    getDateParts(v->getTicket().getTimeOut(), dd, mm, yy);
+    Utils::getDateParts(v->getTicket().getTimeOut(), dd, mm, yy);
     if (dd == d && mm == m && yy == y) {
-      int fee = v->calculateFee();
+      VehicleConfig cfgH = storage.getVehicleConfig(v->getType());
+      int fee = v->calculateFee(cfgH.dayPrice, cfgH.nightPrice);
       list.push_back({v->getPlate(), v->getTicket().getDateOut(), fee,
                       v->getType(), v->getTicket().getEmployeeID()});
       total += fee;
@@ -295,11 +210,25 @@ bool RevenueManager::revenueByDay() {
     temp.pop();
   }
 
+  int dailyTotal = total;
+  vector<Record> monthlyList = readMonthlyRevenue(d, m, y);
+  int monthlyTotal = 0;
+  for (auto &r : monthlyList) {
+    monthlyTotal += r.fee;
+    list.push_back(r);
+  }
+
   if (!list.empty()) {
     cout << "\n========================================\n";
     cout << "   DOANH THU NGAY: " << d << "/" << m << "/" << y << endl;
     cout << "========================================\n";
-    printSummary(list);
+    cout << "  - Doanh thu ve luot  : " << right << setw(10) << dailyTotal
+         << " VND\n";
+    cout << "  - Doanh thu ve thang : " << right << setw(10) << monthlyTotal
+         << " VND\n";
+    cout << "  --------------------------------------\n";
+    cout << "  TONG DOANH THU       : " << right << setw(10)
+         << (dailyTotal + monthlyTotal) << " VND\n";
     printRecords(list);
     sortMenu(list);
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
@@ -314,21 +243,17 @@ bool RevenueManager::revenueByDay() {
 //  Doanh thu theo tháng + sắp xếp
 // ============================================================
 bool RevenueManager::revenueByMonth() {
+  string inputStr;
   int m, y;
   while (true) {
-    cout << "Nhap thang nam (mm yyyy): ";
-    cin >> m >> y;
-    if (cin.fail()) {
-      cin.clear();
-      cin.ignore(1000, '\n');
-      cout << "Nhap sai! Vui long nhap so.\n";
-      continue;
+    cout << "Nhap thang nam (MM/YYYY): ";
+    cin >> inputStr;
+    if (sscanf(inputStr.c_str(), "%d/%d", &m, &y) == 2 &&
+        Utils::isValidMonth(m, y)) {
+      break;
     }
-    if (!isValidMonth(m, y)) {
-      cout << "Thang nam khong hop le hoac lon hon hien tai!\n";
-      continue;
-    }
-    break;
+    cout << "Thang nam khong hop le (Dinh dang: MM/YYYY) hoac lon hon hien "
+            "tai!\n";
   }
 
   stack<Vehicle *> temp = storage.getHistory();
@@ -337,9 +262,10 @@ bool RevenueManager::revenueByMonth() {
   while (!temp.empty()) {
     Vehicle *v = temp.top();
     int dd, mm, yy;
-    getDateParts(v->getTicket().getTimeOut(), dd, mm, yy);
+    Utils::getDateParts(v->getTicket().getTimeOut(), dd, mm, yy);
     if (mm == m && yy == y) {
-      int fee = v->calculateFee();
+      VehicleConfig cfgH = storage.getVehicleConfig(v->getType());
+      int fee = v->calculateFee(cfgH.dayPrice, cfgH.nightPrice);
       list.push_back({v->getPlate(), v->getTicket().getDateOut(), fee,
                       v->getType(), v->getTicket().getEmployeeID()});
       total += fee;
@@ -347,11 +273,25 @@ bool RevenueManager::revenueByMonth() {
     temp.pop();
   }
 
+  int dailyTotal = total;
+  vector<Record> monthlyList = readMonthlyRevenue(-1, m, y);
+  int monthlyTotal = 0;
+  for (auto &r : monthlyList) {
+    monthlyTotal += r.fee;
+    list.push_back(r);
+  }
+
   if (!list.empty()) {
     cout << "\n========================================\n";
     cout << "   DOANH THU THANG: " << m << "/" << y << endl;
     cout << "========================================\n";
-    printSummary(list);
+    cout << "  - Doanh thu ve luot  : " << right << setw(10) << dailyTotal
+         << " VND\n";
+    cout << "  - Doanh thu ve thang : " << right << setw(10) << monthlyTotal
+         << " VND\n";
+    cout << "  --------------------------------------\n";
+    cout << "  TONG DOANH THU       : " << right << setw(10)
+         << (dailyTotal + monthlyTotal) << " VND\n";
     printRecords(list);
     sortMenu(list);
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
@@ -366,21 +306,15 @@ bool RevenueManager::revenueByMonth() {
 //  Doanh thu theo năm + sắp xếp
 // ============================================================
 bool RevenueManager::revenueByYear() {
+  string inputStr;
   int y;
   while (true) {
-    cout << "Nhap nam: ";
-    cin >> y;
-    if (cin.fail()) {
-      cin.clear();
-      cin.ignore(1000, '\n');
-      cout << "Nhap sai! Vui long nhap so.\n";
-      continue;
+    cout << "Nhap nam (YYYY): ";
+    cin >> inputStr;
+    if (sscanf(inputStr.c_str(), "%d", &y) == 1 && Utils::isValidYear(y)) {
+      break;
     }
-    if (!isValidYear(y)) {
-      cout << "Nam khong hop le hoac lon hon hien tai!\n";
-      continue;
-    }
-    break;
+    cout << "Nam khong hop le (Dinh dang: YYYY) hoac lon hon hien tai!\n";
   }
 
   stack<Vehicle *> temp = storage.getHistory();
@@ -389,9 +323,10 @@ bool RevenueManager::revenueByYear() {
   while (!temp.empty()) {
     Vehicle *v = temp.top();
     int dd, mm, yy;
-    getDateParts(v->getTicket().getTimeOut(), dd, mm, yy);
+    Utils::getDateParts(v->getTicket().getTimeOut(), dd, mm, yy);
     if (yy == y) {
-      int fee = v->calculateFee();
+      VehicleConfig cfgH = storage.getVehicleConfig(v->getType());
+      int fee = v->calculateFee(cfgH.dayPrice, cfgH.nightPrice);
       list.push_back({v->getPlate(), v->getTicket().getDateOut(), fee,
                       v->getType(), v->getTicket().getEmployeeID()});
       total += fee;
@@ -399,11 +334,25 @@ bool RevenueManager::revenueByYear() {
     temp.pop();
   }
 
+  int dailyTotal = total;
+  vector<Record> monthlyList = readMonthlyRevenue(-1, -1, y);
+  int monthlyTotal = 0;
+  for (auto &r : monthlyList) {
+    monthlyTotal += r.fee;
+    list.push_back(r);
+  }
+
   if (!list.empty()) {
     cout << "\n========================================\n";
     cout << "   DOANH THU NAM: " << y << endl;
     cout << "========================================\n";
-    printSummary(list);
+    cout << "  - Doanh thu ve luot  : " << right << setw(10) << dailyTotal
+         << " VND\n";
+    cout << "  - Doanh thu ve thang : " << right << setw(10) << monthlyTotal
+         << " VND\n";
+    cout << "  --------------------------------------\n";
+    cout << "  TONG DOANH THU       : " << right << setw(10)
+         << (dailyTotal + monthlyTotal) << " VND\n";
     printRecords(list);
     sortMenu(list);
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
