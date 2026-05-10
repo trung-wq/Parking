@@ -46,6 +46,7 @@ public:
 
   // Đếm xe theo từng loại
   void countVehicles(int &countBicycle, int &countMotorbike, int &countCar);
+  int countMonthlyInLot(int type);
 
   // --- Kiểm tra biển số trùng ---
   bool isDuplicatePlate(const string &plate);
@@ -64,6 +65,8 @@ public:
   // --- Quản lý xe ---
   bool addVehicle(string empID, MonthlyTicketManager &monthlyManager);
   bool removeVehicle(string empID);
+  // Nâng cấp xe vé lượt đang trong bãi → vé tháng (đặt expirationDate = now)
+  bool upgradeVehicleToMonthly(const string &plate, const string &ticketID, time_t registrationTime, const string &newMonthlyTicketID);
 
   // --- Quản lý vị trí ---
   void initSlots();

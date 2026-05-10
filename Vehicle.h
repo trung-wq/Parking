@@ -28,6 +28,14 @@ public:
     return string(buffer);
   }
 
+  string formatDateTime(time_t t) {
+    tm info;
+    localtime_r(&t, &info);
+    char buffer[50];
+    strftime(buffer, sizeof(buffer), "%d/%m/%Y %H:%M", &info);
+    return string(buffer);
+  }
+
   int getHour(time_t t) {
     time_t now;
     time(&now);

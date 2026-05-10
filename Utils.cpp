@@ -103,7 +103,12 @@ bool isValidPhone(const string &phone) {
 bool isValidName(const string &name) {
   if (name.empty() || name.length() > 50)
     return false;
-  return true;
+  // Kiểm tra xem tên có chứa ít nhất một ký tự không phải khoảng trắng không
+  for (char c : name) {
+    if (!isspace((unsigned char)c))
+      return true;
+  }
+  return false;
 }
 
 string formatDuration(time_t seconds) {

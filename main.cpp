@@ -130,10 +130,18 @@ int main() {
           waitEnter();
           break;
         case 4:
-          if (lot.search()) {
-            cout << "\nNhan Enter de tiep tuc...";
-            waitEnter();
-          }
+          lot.addMonthlyTicket(currentUser->getID());
+          cout << "\nNhan Enter de tiep tuc...";
+          waitEnter();
+          break;
+        case 5:
+          lot.manageMonthlyTicket(currentUser->getID());
+          break;
+        case 6:
+          lot.showMonthlyStatistics();
+          lot.showMonthlyTickets();
+          cout << "\nNhan Enter de tiep tuc...";
+          waitEnter();
           break;
         case 0:
           cout << "Dang xuat thanh cong!\n";

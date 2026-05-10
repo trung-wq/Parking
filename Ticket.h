@@ -17,6 +17,7 @@ private:
   bool isMonthly;
   time_t expirationDate;
   string slotCode;
+  bool upgradedMidStay; // true = vao bang ve luot, dang ky ve thang trong khi dang gui
 
 public:
   Ticket(string i) {
@@ -27,6 +28,7 @@ public:
     isMonthly = false;
     expirationDate = 0;
     slotCode = "N/A";
+    upgradedMidStay = false;
   }
 
   Ticket() {
@@ -36,12 +38,15 @@ public:
     isMonthly = false;
     expirationDate = 0;
     slotCode = "N/A";
+    upgradedMidStay = false;
   }
   void setId(string i) { id = i; }
   void setExpirationDate(time_t e) { expirationDate = e; }
   time_t getExpirationDate() { return expirationDate; }
   void setIsMonthly(bool m) { isMonthly = m; }
   bool getIsMonthly() { return isMonthly; }
+  void setUpgradedMidStay(bool u) { upgradedMidStay = u; }
+  bool getUpgradedMidStay() { return upgradedMidStay; }
   string setDate(time_t d) {
     tm info;
     localtime_r(&d, &info);

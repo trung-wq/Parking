@@ -24,6 +24,22 @@ void ParkingStorage::countVehicles(int &countBicycle, int &countMotorbike,
 }
 
 // ============================================================
+//  Đếm số xe vé tháng hiện có trong bãi theo loại
+// ============================================================
+int ParkingStorage::countMonthlyInLot(int type) {
+  int count = 0;
+  queue<Vehicle *> temp = parkingQueue;
+  while (!temp.empty()) {
+    if (temp.front()->getType() == type &&
+        temp.front()->getTicket().getIsMonthly()) {
+      count++;
+    }
+    temp.pop();
+  }
+  return count;
+}
+
+// ============================================================
 //  Kiểm tra biển số trùng
 // ============================================================
 bool ParkingStorage::isDuplicatePlate(const string &plate) {
@@ -103,7 +119,8 @@ void ParkingStorage::saveToFile() {
         << v->getTicket().getEmployeeID() << " "
         << v->getTicket().getIsMonthly() << " "
         << v->getTicket().getExpirationDate() << " "
-        << v->getTicket().getSlotCode() << endl;
+        << v->getTicket().getSlotCode() << " "
+        << (v->getTicket().getUpgradedMidStay() ? 1 : 0) << endl;
     temp.pop();
   }
   out.close();
@@ -211,8 +228,17 @@ void ParkingStorage::loadFromFile(MonthlyTicketManager &monthlyManager) {
     }
   };
 
-  while (in >> type >> col2 >> inDate >> inTime >> eid >> monthly >> expDate >>
-         slotCode) {
+  string line;
+  while (getline(in, line)) {
+    if (line.empty())
+      continue;
+    stringstream ss(line);
+    if (!(ss >> type >> col2 >> inDate >> inTime >> eid >> monthly >> expDate >>
+          slotCode))
+      continue;
+
+    int upgraded = 0;
+    ss >> upgraded; // Sẽ lấy 0 nếu file cũ không có cờ này
     // Tách col2 thành ticketID và plate
     string tid, plate;
     size_t sep = col2.find('|');
@@ -247,12 +273,47 @@ void ParkingStorage::loadFromFile(MonthlyTicketManager &monthlyManager) {
     v->getTicket().setIsMonthly(monthly == 1);
     v->getTicket().setExpirationDate(expDate);
     v->getTicket().setSlotCode(slotCode);
+    v->getTicket().setUpgradedMidStay(upgraded == 1);
     if (slotCode != "N/A") {
       updateSlotStatus(slotCode, SlotStatus::Occupied);
     }
     parkingQueue.push(v);
   }
   in.close();
+}
+
+// ============================================================
+//  Nâng cấp xe vé lượt đang trong bãi → vé tháng (mid-stay)
+//  Đặt isMonthly = true, expirationDate = thời điểm đăng ký (T2)
+//  → calculateFee sẽ tính phí từ T2 đến lúc ra (như vé tháng quá hạn)
+//  → Thời gian T1 (vào) đến T2 (đăng ký) được miễn phí
+// ============================================================
+bool ParkingStorage::upgradeVehicleToMonthly(const string &plate,
+                                             const string &ticketID,
+                                             time_t registrationTime,
+                                             const string &newMonthlyTicketID) {
+  queue<Vehicle *> temp = parkingQueue;
+  bool found = false;
+  while (!temp.empty()) {
+    Vehicle *v = temp.front();
+    temp.pop();
+    bool matchPlate =
+        !plate.empty() && plate != "NONE" && v->getPlate() == plate;
+    bool matchTicket = !ticketID.empty() && v->getTicket().getId() == ticketID;
+    if ((matchPlate || matchTicket) && !v->getTicket().getIsMonthly()) {
+      v->getTicket().setIsMonthly(true);
+      v->getTicket().setUpgradedMidStay(true);
+      v->getTicket().setExpirationDate(registrationTime); // T2
+      if (!newMonthlyTicketID.empty()) {
+        v->getTicket().setId(newMonthlyTicketID);
+      }
+      found = true;
+      break;
+    }
+  }
+  if (found)
+    saveToFile();
+  return found;
 }
 
 // ============================================================
@@ -272,32 +333,12 @@ bool ParkingStorage::addVehicle(string empID,
   if (type == 0)
     return false;
 
-  // Kiểm tra đầy chỗ
+  // Thu thập thông tin sức chứa và số lượng xe hiện tại
   int countBicycle, countMotorbike, countCar;
   countVehicles(countBicycle, countMotorbike, countCar);
-
   VehicleConfig cfg = getVehicleConfig(type);
   int currentCount =
       (type == 1 ? countBicycle : (type == 2 ? countMotorbike : countCar));
-
-  if (currentCount >= cfg.maxCapacity) {
-    cout << "\n!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
-    cout << "          THONG BAO: HET CHO!\n";
-    cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
-    string typeName = (type == 1 ? "Xe dap" : (type == 2 ? "Xe may" : "O to"));
-    cout << "  " << typeName << " da day (" << currentCount << "/"
-         << cfg.maxCapacity << ")\n";
-
-    cout << "\n  --- Vi tri trong con lai ---\n";
-    cout << "  Xe dap : " << (getVehicleConfig(1).maxCapacity - countBicycle)
-         << " cho trong\n";
-    cout << "  Xe may : " << (getVehicleConfig(2).maxCapacity - countMotorbike)
-         << " cho trong\n";
-    cout << "  O to   : " << (getVehicleConfig(3).maxCapacity - countCar)
-         << " cho trong\n";
-    cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n";
-    return true;
-  }
 
   // Bước 2: Nhập thông tin định danh
   string identifier;
@@ -307,19 +348,24 @@ bool ParkingStorage::addVehicle(string empID,
 
   if (type == 1) {
     while (true) {
-      cout << "  Nhap ma ve thang (1=Co, 2=Khong): ";
+      cout << "  Su dung ve thang? (1: Co, 2: Khong): ";
       string choice;
       getline(cin, choice);
       if (choice == "1") {
         cout << "  Nhap ma ve: ";
         getline(cin, identifier);
         identifier = Utils::normalizeString(identifier);
-        if (!identifier.empty()) {
-          if (isVehicleInLot(identifier)) {
-            cout << "  [!] Ve thang nay hien dang duoc su dung trong bai!\n";
-            continue; // Go back to '1=Co, 2=Khong'
-          }
-          status = monthlyManager.checkTicketByID(identifier);
+        if (identifier.empty())
+          continue;
+
+        if (isVehicleInLot(identifier)) {
+          cout << "  [!] Ve thang nay hien dang duoc su dung trong bai!\n";
+          continue;
+        }
+        status = monthlyManager.checkTicketByID(identifier);
+        if (status == 0) {
+          cout << "  [!] Khong tim thay ve thang '" << identifier << "'!\n";
+          continue;
         }
         break;
       } else if (choice == "2") {
@@ -330,10 +376,47 @@ bool ParkingStorage::addVehicle(string empID,
       }
     }
   } else {
-    cout << "  Vui long nhap thong tin xe:\n";
-    plate = readPlate(true, type);
-    identifier = plate;
-    status = monthlyManager.checkTicket(plate);
+    while (true) {
+      cout << "  Su dung ve thang? (1: Co, 2: Khong): ";
+      string choice;
+      getline(cin, choice);
+      if (choice == "1") {
+        cout << "  Nhap ma ve hoac bien so: ";
+        getline(cin, identifier);
+        identifier = Utils::normalizeString(identifier);
+        if (identifier.empty())
+          continue;
+
+        if (isVehicleInLot(identifier)) {
+          cout << "  [!] Xe/Ve nay hien dang duoc su dung trong bai!\n";
+          continue;
+        }
+
+        // Kiểm tra theo biển số trước, sau đó theo mã vé
+        status = monthlyManager.checkTicket(identifier);
+        if (status != 0) {
+          plate = identifier;
+        } else {
+          status = monthlyManager.checkTicketByID(identifier);
+          if (status != 0) {
+            plate = monthlyManager.getPlateByID(identifier);
+          }
+        }
+
+        if (status == 0) {
+          cout << "  [!] Khong tim thay ve thang '" << identifier << "'!\n";
+          continue;
+        }
+        break;
+      } else if (choice == "2") {
+        plate = readPlate(true, type);
+        identifier = plate;
+        status = 0;
+        break;
+      } else {
+        cout << "  [!] Lua chon khong hop le!\n";
+      }
+    }
   }
 
   using Factory = function<Vehicle *(const string &, const string &)>;
@@ -343,51 +426,69 @@ bool ParkingStorage::addVehicle(string empID,
       {3, [](const string &p, const string &t) { return new Car(p, t); }},
   };
 
-  string ticketID;
-  if (status == 1 || status == 3) {
-    // Có vé tháng hợp lệ: dùng mã vé tháng
-    if (type == 1) {
-      ticketID = identifier;
-    } else {
-      ticketID = monthlyManager.getTicketID(plate);
-    }
-  } else {
-    // Vé lượt: sinh mã theo định dạng VXD/VXM/VOT
-    auto formatID = [](const string &prefix, int &counter) {
-      stringstream ss;
-      ss << prefix << setfill('0') << setw(3) << counter++;
-      return ss.str();
-    };
-    if (type == 1)
-      ticketID = formatID("VXD", counterVXD);
-    else if (type == 2)
-      ticketID = formatID("VXM", counterVXM);
-    else
-      ticketID = formatID("VOT", counterVOT);
-  }
-
-  Vehicle *v = vehicleFactory.at(type)(plate, ticketID);
+  Vehicle *v = vehicleFactory.at(type)(
+      plate, (identifier.empty() ? "" : identifier)); // Placeholder ID
   v->getTicket().setEmployeeID(empID);
 
-  // Bước 3: Kiểm tra trạng thái vé và áp dụng loại vé (Theo luồng xử lý mới)
-  if (status == 1 || status == 3) {
-    // CÓ VÉ THÁNG & CÒN HẠN -> MIỄN PHÍ
+  // --- KIỂM TRA SỨC CHỨA VÀ ĐIỀU KIỆN VÀO BÃI ---
+  bool isMonthly = (status == 1 || status == 3);
+
+  if (isMonthly) {
+    // Khách vé tháng: Chỉ chặn nếu bãi ĐÃ ĐẦY THỰC TẾ
+    if (currentCount >= cfg.maxCapacity) {
+      cout << "\n  [!] LOI: Bai xe da day cung (" << currentCount << "/"
+           << cfg.maxCapacity << ")!\n";
+      cout << "      Xin loi quy khach ve thang, vui long quay lai sau.\n";
+      delete v;
+      return true;
+    }
     if (status == 3)
       cout << "\n  [!] Canh bao: Ve thang SAP HET HAN!\n";
     v->getTicket().setIsMonthly(true);
-    if (type == 1)
-      v->getTicket().setExpirationDate(
-          monthlyManager.getExpirationDateByID(identifier));
-    else
-      v->getTicket().setExpirationDate(monthlyManager.getExpirationDate(plate));
+    v->getTicket().setExpirationDate(
+        type == 1 ? monthlyManager.getExpirationDateByID(identifier)
+                  : monthlyManager.getExpirationDate(plate));
+
+    // Lấy lại Ticket ID chuẩn cho vé tháng (XM001, ...)
+    string realTID =
+        (type == 1 ? identifier : monthlyManager.getTicketID(plate));
+    v->getTicket().setId(realTID);
   } else {
-    // KHÔNG CÓ VÉ THÁNG HOẶC HẾT HẠN -> VÉ LƯỢT
+    // Khách vé lượt: Chặn nếu hết chỗ HOẶC hết chỗ dự phòng cho vé tháng
+    int monthlyInLot = countMonthlyInLot(type);
+    int totalMonthly = monthlyManager.countTicketsByType(type);
+    int monthlyOut = totalMonthly - monthlyInLot; // Số vé tháng chưa vào bãi
+
+    if (currentCount + monthlyOut >= cfg.maxCapacity) {
+      cout << "\n  [!] THONG BAO: HET CHO CHO XE LUOT!\n";
+      cout
+          << "      Cac vi tri con lai dang duoc uu tien cho khach ve thang.\n";
+      delete v;
+      return true;
+    }
+
     if (status == 2)
       cout << "\n  [!] Thong bao: Ve thang cua xe nay da HET HAN!\n";
     else if (status == 4)
       cout << "\n  [!] Thong bao: Ve thang cua xe nay hien dang BI KHOA!\n";
 
     v->getTicket().setIsMonthly(false);
+
+    // Sinh mã vé lượt
+    auto formatID = [](const string &prefix, int &counter) {
+      stringstream ss;
+      ss << prefix << setfill('0') << setw(3) << counter++;
+      return ss.str();
+    };
+    string ticketID;
+    if (type == 1)
+      ticketID = formatID("VXD", counterVXD);
+    else if (type == 2)
+      ticketID = formatID("VXM", counterVXM);
+    else
+      ticketID = formatID("VOT", counterVOT);
+
+    v->getTicket().setId(ticketID);
   }
 
   // Phân bổ vị trí
@@ -401,10 +502,34 @@ bool ParkingStorage::addVehicle(string empID,
   parkingQueue.push(v);
 
   cout << "\n========================================";
-  cout << "\n           THEM XE THANH CONG!          ";
+  cout << "\n         PHIEU GUI XE VAO BAI         ";
   cout << "\n========================================\n";
+
+  // Nhóm 1: Thông tin xe
+  string typeStr =
+      (v->getType() == 1 ? "Xe dap" : (v->getType() == 2 ? "Xe may" : "O to"));
+  cout << "  Loai xe    : " << typeStr << endl;
+  if (!v->getPlate().empty() && v->getPlate() != "NONE") {
+    cout << "  Bien so    : " << v->getPlate() << endl;
+  }
+  cout << "  Ma ve      : " << v->getTicket().getId() << " ("
+       << (v->getTicket().getIsMonthly() ? "VE THANG" : "VE LUOT") << ")"
+       << endl;
+  cout << "  Vi tri     : " << v->getTicket().getSlotCode() << endl;
+
+  cout << "  ------------------------------------" << endl;
+
+  // Nhóm 2: Thời gian & Đơn giá
+  cout << "  Ngay vao   : " << v->getTicket().getDateIn() << endl;
+  cout << "  Gio vao    : " << v->formatTime(v->getTicket().getTimeIn())
+       << endl;
+
   VehicleConfig cfg2 = getVehicleConfig(v->getType());
-  v->display(cfg2.dayPrice, cfg2.nightPrice);
+  cout << "  Don gia    : " << cfg2.dayPrice << " / " << cfg2.nightPrice
+       << " (Ngay/Dem)" << endl;
+
+  cout << "  ------------------------------------" << endl;
+  cout << "  Nhan vien  : " << empID << endl;
   cout << "========================================\n";
   saveToFile();
   return true;
@@ -490,25 +615,59 @@ bool ParkingStorage::removeVehicle(string empID) {
         VehicleConfig cfgOut = getVehicleConfig(v->getType());
         int fee = v->calculateFee(cfgOut.dayPrice, cfgOut.nightPrice);
         cout << "\n========================================";
-        cout << "\n         XE ROI BAI THANH CONG        ";
+        cout << "\n         HOA DON XE ROI BAI           ";
         cout << "\n========================================\n";
-        v->display(cfgOut.dayPrice, cfgOut.nightPrice);
-        cout << "Ngay ra  : " << v->getTicket().getDateOut() << endl;
-        cout << "Gio ra   : " << v->formatTime(v->getTicket().getTimeOut())
+
+        // Nhóm 1: Thông tin xe
+        string typeStr =
+            (v->getType() == 1 ? "Xe dap"
+                               : (v->getType() == 2 ? "Xe may" : "O to"));
+        cout << "  Loai xe    : " << typeStr << endl;
+        if (!v->getPlate().empty() && v->getPlate() != "NONE") {
+          cout << "  Bien so    : " << v->getPlate() << endl;
+        }
+        cout << "  Ma ve      : " << v->getTicket().getId() << " ("
+             << (v->getTicket().getIsMonthly() ? "VE THANG" : "VE LUOT") << ")"
              << endl;
-        cout << "T.Gian   : "
+        cout << "  Vi tri     : " << v->getTicket().getSlotCode() << endl;
+
+        cout << "  ------------------------------------" << endl;
+
+        // Nhóm 2: Thời gian
+        cout << "  Thoi gian vao: " << v->getTicket().getDateIn() << " "
+             << v->formatTime(v->getTicket().getTimeIn()) << endl;
+        cout << "  Thoi gian ra : " << v->getTicket().getDateOut() << " "
+             << v->formatTime(v->getTicket().getTimeOut()) << endl;
+        cout << "  Tong t.gian  : "
              << getDurationString(v->getTicket().getTimeIn(),
                                   v->getTicket().getTimeOut())
              << endl;
 
-        if (v->getTicket().getIsMonthly() &&
-            v->getTicket().getTimeOut() > v->getTicket().getExpirationDate()) {
-          cout << "  [!] Chu y: Ve thang da het han luc: "
-               << v->formatTime(v->getTicket().getExpirationDate()) << endl;
-          cout << "  [!] Tien gui phat sinh tinh tu luc het han den khi ra.\n";
+        cout << "  ------------------------------------" << endl;
+
+        // Nhóm 3: Thanh toán
+        cout << "  Don gia    : " << cfgOut.dayPrice << " / "
+             << cfgOut.nightPrice << " (Ngay/Dem)" << endl;
+
+        if (v->getTicket().getIsMonthly()) {
+          if (v->getTicket().getUpgradedMidStay()) {
+            time_t expiry = v->getTicket().getExpirationDate();
+            cout << "  [*] Xe dang ky VE THANG luc " << v->formatTime(expiry)
+                 << endl;
+            cout << "  [*] Chi tinh phi tu luc vao bai den luc dang ky ve "
+                    "thang.\n";
+            cout << "  [*] Thoi gian tu luc dang ky ve thang den luc ra: MIEN "
+                    "PHI.\n";
+          } else if (v->getTicket().getTimeOut() >
+                     v->getTicket().getExpirationDate()) {
+            time_t expiry = v->getTicket().getExpirationDate();
+            cout << "  [!] Chu y: Ve thang het han luc "
+                 << v->formatTime(expiry) << endl;
+            cout << "  [!] Phat sinh phi tu luc het han.\n";
+          }
         }
 
-        cout << "Tien gui : " << fee << " VND\n";
+        cout << "  THANH TOAN : " << fee << " VND" << endl;
         cout << "========================================\n";
         revenue += fee;
 

@@ -80,8 +80,17 @@ void MonthlyTicketManager::addTicket(string empID, ParkingStorage &storage) {
   if (t.vehicleType == 0) {
     return;
   }
+  string regularTicketIDToUpgrade = "";
   if (t.vehicleType == 1) {
     t.plate = "NONE";
+    cout << "  Xe dap nay hien dang gui trong bai bang ve luot khong? (1: Co, 2: Khong): ";
+    int choice = Utils::readMenuChoice(1, 2);
+    if (choice == 1) {
+      cout << "  Nhap ma ve luot (VD: VXD001): ";
+      cin >> regularTicketIDToUpgrade;
+      cin.ignore(numeric_limits<streamsize>::max(), '\n');
+      regularTicketIDToUpgrade = Utils::normalizeString(regularTicketIDToUpgrade);
+    }
   } else {
     while (true) {
       cout << "  Nhap bien so: ";
@@ -144,12 +153,32 @@ void MonthlyTicketManager::addTicket(string empID, ParkingStorage &storage) {
     ss << "OT" << setfill('0') << setw(3) << counterOT++;
   }
   t.ticketID = ss.str();
-  cout << "  -> ID Ve: " << t.ticketID << endl;
 
   VehicleConfig cfg = storage.getVehicleConfig(t.vehicleType);
-  t.price = cfg.monthlyPrice;
 
-  cout << "  -> Gia ve: " << t.price << " VND" << endl;
+  // Kiểm tra sức chứa tổng hợp (Vé tháng đã đăng ký + Xe lượt đang trong bãi)
+  int registeredTickets = countTicketsByType(t.vehicleType);
+  int countB, countM, countC;
+  storage.countVehicles(countB, countM, countC);
+  int totalInLot =
+      (t.vehicleType == 1 ? countB : (t.vehicleType == 2 ? countM : countC));
+  int monthlyInLot = storage.countMonthlyInLot(t.vehicleType);
+  int regularInLot = totalInLot - monthlyInLot;
+
+  if (registeredTickets + regularInLot >= cfg.maxCapacity) {
+    string typeName =
+        (t.vehicleType == 1 ? "Xe dap"
+                            : (t.vehicleType == 2 ? "Xe may" : "O to"));
+    cout << "\n  [!] LOI: Khong the dang ky them ve thang cho " << typeName
+         << "!" << endl;
+    cout << "      Tong so cho da dat truoc (" << registeredTickets
+         << ") va xe luot dang do (" << regularInLot << ") " << endl;
+    cout << "      da dat gioi han suc chua cua bai (" << cfg.maxCapacity
+         << ")." << endl;
+    return;
+  }
+
+  t.price = cfg.monthlyPrice;
 
   t.registrationDate = time(0);
   tm *ltm = localtime(&t.registrationDate);
@@ -164,7 +193,54 @@ void MonthlyTicketManager::addTicket(string empID, ParkingStorage &storage) {
   tickets.push_back(t);
   saveToFile();
   logRevenue(t, empID);
-  cout << "  [+] Dang ky thanh cong!" << endl;
+
+  // --- Nâng cấp xe đang trong bãi (vé lượt → vé tháng mid-stay) ---
+  // expirationDate của ticket trong bãi = registrationDate (T2)
+  // → khi ra: tính phí từ T2 đến lúc ra (như quá hạn), T1→T2 miễn phí
+  bool upgraded = false;
+  if (t.vehicleType == 1 && !regularTicketIDToUpgrade.empty()) {
+    // Với xe đạp, tìm bằng mã vé lượt và đổi mã vé thành mã vé tháng mới
+    upgraded = storage.upgradeVehicleToMonthly("", regularTicketIDToUpgrade, t.registrationDate, t.ticketID);
+  } else {
+    // Với ô tô, xe máy, tìm bằng biển số và đổi mã vé thành mã vé tháng mới
+    upgraded = storage.upgradeVehicleToMonthly(t.plate, "", t.registrationDate, t.ticketID);
+  }
+
+  if (upgraded) {
+    cout << "\n  [*] Xe dang trong bai da duoc chuyen sang VE THANG.\n";
+    cout << "      Chi tinh phi gui xe luot tu luc vao bai den thoi diem dang ky nay.\n";
+    cout << "      Thoi gian tu bay gio den luc ra bai se duoc MIEN PHI.\n";
+  }
+
+
+  cout << "\n========================================";
+  cout << "\n       DANG KY VE THANG THANH CONG      ";
+  cout << "\n========================================\n";
+
+  // Nhóm 1: Thông tin xe & Chủ xe
+  string typeStr =
+      (t.vehicleType == 1 ? "Xe dap"
+                          : (t.vehicleType == 2 ? "Xe may" : "O to"));
+  cout << "  Loai xe    : " << typeStr << endl;
+  if (t.vehicleType != 1) {
+    cout << "  Bien so    : " << t.plate << endl;
+  }
+  cout << "  Ma ve (ID) : " << t.ticketID << endl;
+  cout << "  Chu xe     : " << t.ownerName << endl;
+  cout << "  SDT        : " << t.phoneNumber << endl;
+
+  cout << "  ------------------------------------" << endl;
+
+  // Nhóm 2: Thời hạn
+  cout << "  Ngay BD    : " << formatTime(t.registrationDate) << endl;
+  cout << "  Ngay HH    : " << formatTime(t.expirationDate) << endl;
+
+  cout << "  ------------------------------------" << endl;
+
+  // Nhóm 3: Thanh toán
+  cout << "  Gia ve     : " << t.price << " VND" << endl;
+  cout << "  Nhan vien  : " << empID << endl;
+  cout << "========================================\n";
 }
 
 void MonthlyTicketManager::renewTicket(string empID, ParkingStorage &storage) {
@@ -184,8 +260,8 @@ void MonthlyTicketManager::showAllTickets() {
   auto printHeader = []() {
     cout << left << setw(10) << "ID Ve" << setw(12) << "Bien so" << setw(18)
          << "Chu xe" << setw(12) << "SDT" << setw(10) << "Loai" << setw(12)
-         << "Ngay HH" << setw(12) << "Gia (VND)" << setw(12) << "Trang thai"
-         << endl;
+         << "Ngay BD" << setw(12) << "Ngay HH" << setw(12) << "Gia (VND)"
+         << setw(12) << "Trang thai" << endl;
     cout << string(110, '-') << endl;
   };
 
@@ -209,6 +285,7 @@ void MonthlyTicketManager::showAllTickets() {
              << (t.ownerName.length() > 17 ? t.ownerName.substr(0, 14) + "..."
                                            : t.ownerName)
              << setw(12) << t.phoneNumber << setw(10) << typeStr << setw(12)
+             << formatTime(t.registrationDate) << setw(12)
              << formatTime(t.expirationDate) << setw(12) << t.price << setw(12)
              << statusStr << endl;
       }
@@ -272,8 +349,9 @@ void MonthlyTicketManager::showStatistics() {
 
 int MonthlyTicketManager::countTicketsByType(int type) {
   int count = 0;
+  time_t now = time(0);
   for (const auto &t : tickets) {
-    if (t.vehicleType == type) {
+    if (t.vehicleType == type && !t.isLocked && t.expirationDate > now) {
       count++;
     }
   }
@@ -355,6 +433,15 @@ time_t MonthlyTicketManager::getExpirationDateByID(const string &id) {
   return 0;
 }
 
+string MonthlyTicketManager::getPlateByID(const string &id) {
+  string upperID = Utils::normalizeString(id);
+  for (const auto &t : tickets) {
+    if (Utils::normalizeString(t.ticketID) == upperID)
+      return t.plate;
+  }
+  return "";
+}
+
 void MonthlyTicketManager::manageTicket(string empID, ParkingStorage &storage) {
   cout << "\n--- TRA CUU & QUAN LY VE THANG ---" << endl;
   cout << "1. Tim theo Bien so" << endl;
@@ -409,27 +496,38 @@ void MonthlyTicketManager::manageTicket(string empID, ParkingStorage &storage) {
 
   if (!foundTicket) {
     cout << "  [!] Khong tim thay ve thang!" << endl;
+    cout << "  An Enter de tiep tuc...";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
     return;
   }
 
   int subChoice;
   do {
     cout << "\n========================================" << endl;
-    cout << "        THONG TIN VE THANG" << endl;
+    cout << "        CHI TIET VE THANG" << endl;
     cout << "========================================" << endl;
-    cout << "  ID Ve    : " << foundTicket->ticketID << endl;
-    cout << "  Bien so  : "
+
+    // Nhóm 1: Thông tin xe & Chủ xe
+    string typeStr =
+        (foundTicket->vehicleType == 1
+             ? "Xe dap"
+             : (foundTicket->vehicleType == 2 ? "Xe may" : "O to"));
+    cout << "  Loai xe    : " << typeStr << endl;
+    cout << "  Bien so    : "
          << (foundTicket->plate == "NONE" ? "(Khong co)" : foundTicket->plate)
          << endl;
-    cout << "  Loai xe  : "
-         << (foundTicket->vehicleType == 1
-                 ? "Xe dap"
-                 : (foundTicket->vehicleType == 2 ? "Xe may" : "O to"))
+    cout << "  Ma ve (ID) : " << foundTicket->ticketID << endl;
+    cout << "  Chu xe     : " << foundTicket->ownerName << endl;
+    cout << "  SDT        : " << foundTicket->phoneNumber << endl;
+
+    cout << "  ------------------------------------" << endl;
+
+    // Nhóm 2: Thời hạn & Trạng thái
+    cout << "  Ngay DK    : " << formatTime(foundTicket->registrationDate)
          << endl;
-    cout << "  Chu xe   : " << foundTicket->ownerName << endl;
-    cout << "  SDT      : " << foundTicket->phoneNumber << endl;
-    cout << "  Han dung : " << formatTime(foundTicket->expirationDate) << endl;
-    cout << "  Trang thai: "
+    cout << "  Han dung   : " << formatTime(foundTicket->expirationDate)
+         << endl;
+    cout << "  Trang thai : "
          << (foundTicket->isLocked ? "DANG KHOA" : "DANG HOAT DONG") << endl;
 
     time_t now = time(0);
@@ -449,14 +547,36 @@ void MonthlyTicketManager::manageTicket(string empID, ParkingStorage &storage) {
     if (subChoice == 1) {
       // Gia han
       time_t now = time(0);
+
+      // Nếu vé đã hết hạn, cần kiểm tra sức chứa trước khi cho phép gia hạn lại
+      if (foundTicket->expirationDate < now) {
+        VehicleConfig cfg = storage.getVehicleConfig(foundTicket->vehicleType);
+        int registeredTickets = countTicketsByType(foundTicket->vehicleType);
+        int countB, countM, countC;
+        storage.countVehicles(countB, countM, countC);
+        int totalInLot =
+            (foundTicket->vehicleType == 1
+                 ? countB
+                 : (foundTicket->vehicleType == 2 ? countM : countC));
+        int monthlyInLot = storage.countMonthlyInLot(foundTicket->vehicleType);
+        int regularInLot = totalInLot - monthlyInLot;
+
+        if (registeredTickets + regularInLot >= cfg.maxCapacity) {
+          cout << "\n  [!] LOI: Khong the gia han ve do bai da het cho trong "
+                  "an toan!"
+               << endl;
+          cout << "      Vui long cho xe luot ra bot truoc khi gia han lai."
+               << endl;
+          continue;
+        }
+      }
+
       time_t baseTime = foundTicket->expirationDate;
-      int monthsToAdd =
-          2; // Default for renewing a valid ticket (end of NEXT month)
+      int monthsToAdd = 2;
 
       if (baseTime < now) {
         baseTime = now;
-        monthsToAdd = 1; // If expired, renew until end of CURRENT month (like a
-                         // new ticket)
+        monthsToAdd = 1;
       }
 
       VehicleConfig cfg = storage.getVehicleConfig(foundTicket->vehicleType);
@@ -470,14 +590,77 @@ void MonthlyTicketManager::manageTicket(string empID, ParkingStorage &storage) {
       foundTicket->price = cfg.monthlyPrice;
       logRevenue(*foundTicket, empID);
       saveToFile();
-      cout << "  [+] Da gia han thanh cong den: "
-           << formatTime(foundTicket->expirationDate) << endl;
+
+      // Nâng cấp xe trong bãi nếu xe đang gửi vé lượt (do trước đó hết hạn)
+      storage.upgradeVehicleToMonthly(foundTicket->plate, foundTicket->ticketID, now, foundTicket->ticketID);
+
+      cout << "\n========================================";
+      cout << "\n       GIA HAN VE THANG THANH CONG      ";
+      cout << "\n========================================\n";
+
+      // Nhóm 1: Thông tin xe & Chủ xe
+      string typeStr =
+          (foundTicket->vehicleType == 1
+               ? "Xe dap"
+               : (foundTicket->vehicleType == 2 ? "Xe may" : "O to"));
+      cout << "  Loai xe    : " << typeStr << endl;
+      if (foundTicket->vehicleType != 1) {
+        cout << "  Bien so    : " << foundTicket->plate << endl;
+      }
+      cout << "  Ma ve (ID) : " << foundTicket->ticketID << endl;
+      cout << "  Chu xe     : " << foundTicket->ownerName << endl;
+
+      cout << "  ------------------------------------" << endl;
+
+      // Nhóm 2: Thời hạn mới
+      cout << "  Han dung moi: " << formatTime(foundTicket->expirationDate)
+           << endl;
+
+      cout << "  ------------------------------------" << endl;
+
+      // Nhóm 3: Thanh toán
+      cout << "  THANH TOAN : " << foundTicket->price << " VND" << endl;
+      cout << "  Nhan vien  : " << empID << endl;
+      cout << "========================================\n";
+      cout << "  An Enter de quay lai...";
+      cin.ignore(numeric_limits<streamsize>::max(), '\n');
+      return;
     } else if (subChoice == 2) {
       // Khoa/Mo khoa
       foundTicket->isLocked = !foundTicket->isLocked;
       saveToFile();
-      cout << "  [+] Da " << (foundTicket->isLocked ? "KHOA" : "MO KHOA")
-           << " ve thanh cong!" << endl;
+
+      // Nếu vừa mở khóa, kiểm tra nâng cấp xe trong bãi (nếu xe đó đang gửi vé lượt)
+      if (!foundTicket->isLocked) {
+        time_t now = time(0);
+        storage.upgradeVehicleToMonthly(foundTicket->plate, foundTicket->ticketID, now, foundTicket->ticketID);
+      }
+
+      cout << "\n========================================";
+      cout << "\n    CAP NHAT TRANG THAI THANH CONG      ";
+      cout << "\n========================================\n";
+
+      // Nhóm 1: Thông tin xe & Chủ xe
+      string typeStr = (foundTicket->vehicleType == 1
+                            ? "Xe dap"
+                            : (foundTicket->vehicleType == 2 ? "Xe may" : "O to"));
+      cout << "  Loai xe    : " << typeStr << endl;
+      cout << "  Bien so    : "
+           << (foundTicket->plate == "NONE" ? "(Khong co)" : foundTicket->plate)
+           << endl;
+      cout << "  Ma ve (ID) : " << foundTicket->ticketID << endl;
+      cout << "  Chu xe     : " << foundTicket->ownerName << endl;
+      cout << "  SDT        : " << foundTicket->phoneNumber << endl;
+
+      cout << "  ------------------------------------" << endl;
+
+      // Nhóm 2: Trạng thái mới
+      cout << "  Trang thai : "
+           << (foundTicket->isLocked ? "DA KHOA" : "DANG HOAT DONG") << endl;
+      cout << "========================================\n";
+      cout << "  An Enter de quay lai...";
+      cin.ignore(numeric_limits<streamsize>::max(), '\n');
+      return;
     } else if (subChoice == 3) {
       // Xoa
       if (storage.isVehicleInLot(foundTicket->plate) ||
@@ -491,9 +674,17 @@ void MonthlyTicketManager::manageTicket(string empID, ParkingStorage &storage) {
       if (Utils::readMenuChoice(0, 1) == 1) {
         for (auto it = tickets.begin(); it != tickets.end(); ++it) {
           if (it->ticketID == foundTicket->ticketID) {
+            string deletedID = it->ticketID;
+            string deletedPlate = it->plate;
             tickets.erase(it);
             saveToFile();
-            cout << "  [+] Da xoa ve thang thanh cong!" << endl;
+
+            cout << "\n========================================";
+            cout << "\n        XOA VE THANG THANH CONG         ";
+            cout << "\n========================================\n";
+            cout << "  Ma ve (ID) : " << deletedID << endl;
+            cout << "  Bien so    : " << deletedPlate << endl;
+            cout << "========================================\n";
             return;
           }
         }
